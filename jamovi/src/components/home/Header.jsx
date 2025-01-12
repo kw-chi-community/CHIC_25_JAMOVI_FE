@@ -1,4 +1,4 @@
-import menu from "../../assets/home_menu.svg";
+import menu from "../../assets/HomeMenuIcon.svg";
 
 const Header = () => {
   return (
