@@ -1,15 +1,11 @@
 import menu from "../../assets/HomeMenuIcon.svg";
 
-const Header = () => {
+const Header = ({ toggleSidebar }) => {
   return (
     <div className="min-h-[3rem] flex items-center px-3 bg-white border border-b-gray">
       <div className="w-[3rem]">
-        <button
-          onClick={() => {
-            console.log("버튼을클릭함");
-          }}
-        >
-          <img src={menu} alt="menu icon"></img>
+        <button className="menu" onClick={toggleSidebar}>
+          <img src={menu} alt="menu icon" />
         </button>
       </div>
 
@@ -17,7 +13,7 @@ const Header = () => {
         <button
           className="py-1 px-2 rounded-xl text-sm font-medium text-black hover:bg-gray-100"
           onClick={() => {
-            console.log("버튼을클릭함");
+            console.log("데이터 버튼 클릭함");
           }}
         >
           데이터
@@ -25,7 +21,7 @@ const Header = () => {
         <button
           className="py-1 px-2 rounded-xl text-sm font-medium text-black hover:bg-gray-100"
           onClick={() => {
-            console.log("버튼을클릭함");
+            console.log("분석 버튼 클릭함");
           }}
         >
           분석
@@ -33,7 +29,7 @@ const Header = () => {
         <button
           className="py-1 px-2 rounded-xl text-sm font-medium text-black hover:bg-gray-100"
           onClick={() => {
-            console.log("버튼을클릭함");
+            console.log("해석 버튼 클릭함");
           }}
         >
           해석
