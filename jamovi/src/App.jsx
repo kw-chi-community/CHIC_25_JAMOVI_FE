@@ -1,7 +1,15 @@
 import "./index.css";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import LoginForm from "./components/LoginForm";
 
 function App() {
-  return <div className=" text-center">jamovi 통계 분석</div>;
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<LoginForm />} />
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;
