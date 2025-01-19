@@ -1,4 +1,4 @@
-FROM node:18-alpine as build
+FROM node:22-alpine as build
 
 WORKDIR /app
 
@@ -6,7 +6,8 @@ ARG ENV_FILE
 COPY package*.json ./
 COPY ${ENV_FILE} ./.env
 
-RUN npm install --legacy-peer-deps && npm cache clean --force
+RUN apk add --no-cache python3 make g++
+RUN npm install --verbose && npm cache clean --force
 
 COPY . .
 
