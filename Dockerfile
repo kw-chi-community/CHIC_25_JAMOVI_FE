@@ -13,9 +13,8 @@ FROM nginx:alpine
 
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 1542
 
 CMD ["nginx", "-g", "daemon off;"]
-
-# 도커 내부 포트는 80
-# 도커 외부 포트는 1507
