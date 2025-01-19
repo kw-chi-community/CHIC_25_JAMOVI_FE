@@ -6,8 +6,8 @@ ARG ENV_FILE
 COPY package*.json ./
 COPY ${ENV_FILE} ./.env
 
-RUN apk add --no-cache python3 make g++
-RUN npm install --verbose && npm cache clean --force
+RUN apk add --no-cache python3 make g++ git
+RUN npm ci
 
 COPY . .
 
