@@ -6,7 +6,7 @@ ARG ENV_FILE
 COPY package*.json ./
 COPY ${ENV_FILE} ./.env
 
-RUN npm install
+RUN npm install --legacy-peer-deps && npm cache clean --force
 
 COPY . .
 
