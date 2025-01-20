@@ -10,7 +10,7 @@ import {
   useDisclosure,
   Button,
 } from "@chakra-ui/react";
-import Sidebar from "./home/Sidebar";
+import Sidebar from "./Sidebar";
 
 const Home = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -31,10 +31,8 @@ const Home = () => {
   }, [onOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Button colorScheme="blue" onClick={onOpen}>
-        Open
-      </Button>
+    <div className="w-full min-h-screen flex bg-gray-50">
+      <div className="w-1/2 min-h-full"></div>
       <Drawer placement={placement} onClose={onClose} isOpen={isOpen}>
         <DrawerOverlay />
         <DrawerContent>
