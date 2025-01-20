@@ -11,6 +11,7 @@ import {
   Button,
 } from "@chakra-ui/react";
 import Sidebar from "./Sidebar";
+import DataTable from "./DataTable";
 
 const Home = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -32,7 +33,9 @@ const Home = () => {
 
   return (
     <div className="w-full min-h-screen flex bg-gray-50">
-      <div className="w-1/2 min-h-full"></div>
+      <div className="w-1/2 min-h-full p-5">
+        <DataTable />
+      </div>
       <Drawer placement={placement} onClose={onClose} isOpen={isOpen}>
         <DrawerOverlay />
         <DrawerContent>
