@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import {
   Drawer,
   DrawerBody,
@@ -15,6 +15,20 @@ import Sidebar from "./home/Sidebar";
 const Home = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [placement, setPlacement] = React.useState("right");
+
+  useEffect(() => {
+    onOpen();
+    const handleMouseMove = (event) => {
+      if (window.innerWidth - event.clientX <= 10) {
+        onOpen();
+      }
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [onOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50">
