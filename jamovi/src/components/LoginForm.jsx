@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom"; // useNavigate 훅 임포트
+import { Input } from "@chakra-ui/react";
+import { Button } from "../components/ui/button";
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
@@ -7,7 +9,49 @@ const LoginForm = () => {
     password: "",
   });
   const [error, setError] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState(""); // 사용자 이메일 상태 추가
+  const [isLoading, setIsLoading] = useState(false); // 로딩 상태 추가
   const navigate = useNavigate(); // useNavigate 훅 사용
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsLoggedIn(true);
+      fetchUserInfo(token);
+    }
+  }, []);
+
+  /**
+   * 사용자 정보를 가져옴
+   * @param {string} token - 사용자 토큰
+   * @returns {Promise<void>} - user_id, email(@ 앞부분)
+   */
+  const fetchUserInfo = async (token) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserEmail(data.email);
+      } else {
+        console.error("Failed to fetch user info");
+        handleLogout();
+      }
+    } catch (err) {
+      console.error("Error fetching user info:", err);
+      handleLogout();
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsLoggedIn(false);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,89 +61,129 @@ const LoginForm = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
 
     // 이메일 유효성 검사
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError("유효한 이메일 주소를 입력해주세요.");
+      setIsLoading(false);
       return;
     }
 
     // 비밀번호 유효성 검사
     if (formData.password.length < 6) {
       setError("비밀번호는 최소 6자 이상이어야 합니다.");
+      setIsLoading(false);
       return;
     }
 
-    setError("");
-    // 여기에 로그인 로직 추가
-    console.log("로그인 시도:", formData);
+    try {
+      const params = new URLSearchParams({
+        username: formData.email,
+        password: formData.password,
+      });
 
-    // 로그인 성공 후 경로 이동
-    navigate("/home");
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: params,
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem("token", data.token);
+        setError("");
+        navigate("/home");
+      } else {
+        setError(data.detail || "로그인에 실패했습니다.");
+      }
+    } catch (err) {
+      setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+      console.error("handle submit\n", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-center text-gray-800">
-            로그인
-          </h2>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
-              이메일
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm shadow-sm placeholder-gray-400
-                focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="example@email.com"
-              required
-            />
+        {isLoggedIn ? (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
+              {userEmail ? `${userEmail}님으로 로그인되었습니다.` : ""}
+            </h2>
+            <div className="flex justify-between">
+              <Button variant="ghost" onClick={() => navigate("/home")}>
+                홈으로 이동
+              </Button>
+              <Button onClick={handleLogout} colorScheme="red">
+                로그아웃
+              </Button>
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-center text-gray-800">
+                로그인
+              </h2>
+            </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              비밀번호
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm shadow-sm placeholder-gray-400
-                focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="비밀번호를 입력하세요"
-              required
-            />
-          </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  이메일
+                </label>
+                <Input
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="example@email.com"
+                />
+              </div>
 
-          {error && <div className="text-red-500 text-sm">{error}</div>}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  비밀번호
+                </label>
+                <Input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="비밀번호를 입력하세요"
+                  required
+                />
+              </div>
 
-          <button
-            type="submit" // 버튼의 타입을 submit으로 유지
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            로그인
-          </button>
-        </form>
+              {error && <div className="text-red-500 text-sm">{error}</div>}
+              <div className="flex justify-between">
+                <Button variant="ghost" disabled={isLoading}>
+                  회원가입
+                </Button>
+                <Button type="submit" loading={isLoading} colorScheme="blue">
+                  로그인
+                </Button>
+              </div>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
