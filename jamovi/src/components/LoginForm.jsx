@@ -99,10 +99,14 @@ const LoginForm = () => {
 
       const data = await response.json();
 
-      if (data.success) {
-        localStorage.setItem("token", data.token);
-        setError("");
-        navigate("/home");
+      if (response.ok) {
+        if (data.success) {
+          localStorage.setItem("token", data.token);
+          setError("");
+          navigate("/home");
+        } else {
+          setError("이메일과 비밀번호를 확인해주세요.");
+        }
       } else {
         setError(data.detail || "로그인에 실패했습니다.");
       }
@@ -174,7 +178,11 @@ const LoginForm = () => {
 
               {error && <div className="text-red-500 text-sm">{error}</div>}
               <div className="flex justify-between">
-                <Button variant="ghost" disabled={isLoading}>
+                <Button
+                  variant="ghost"
+                  disabled={isLoading}
+                  onClick={() => navigate("/register")}
+                >
                   회원가입
                 </Button>
                 <Button type="submit" loading={isLoading} colorScheme="blue">
