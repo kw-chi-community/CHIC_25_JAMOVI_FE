@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; // useNavigate 훅 임포트
 import { Input } from "@chakra-ui/react";
 import { Button } from "../components/ui/button";
+import { useAuth } from "../hooks/useAuth";
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
@@ -9,49 +10,15 @@ const LoginForm = () => {
     password: "",
   });
   const [error, setError] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState(""); // 사용자 이메일 상태 추가
-  const [isLoading, setIsLoading] = useState(false); // 로딩 상태 추가
-  const navigate = useNavigate(); // useNavigate 훅 사용
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsLoggedIn(true);
-      fetchUserInfo(token);
-    }
-  }, []);
-
-  /**
-   * 사용자 정보를 가져옴
-   * @param {string} token - 사용자 토큰
-   * @returns {Promise<void>} - user_id, email(@ 앞부분)
-   */
-  const fetchUserInfo = async (token) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/user`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserEmail(data.email);
-      } else {
-        console.error("Failed to fetch user info");
-        handleLogout();
-      }
-    } catch (err) {
-      console.error("Error fetching user info:", err);
-      handleLogout();
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setIsLoggedIn(false);
-  };
+  const {
+    isLoggedIn,
+    userEmail,
+    isLoading,
+    setIsLoading,
+    handleLogin,
+    handleLogout,
+  } = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -101,7 +68,7 @@ const LoginForm = () => {
 
       if (response.ok) {
         if (data.success) {
-          localStorage.setItem("token", data.token);
+          handleLogin(data.token);
           setError("");
           navigate("/home");
         } else {
