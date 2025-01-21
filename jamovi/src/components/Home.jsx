@@ -13,10 +13,14 @@ import {
 import Sidebar from "./Sidebar";
 import DataTable from "./DataTable";
 import SelectOption from "./SelectOption";
+import { Spinner, Text, VStack } from "@chakra-ui/react";
+import { useAuth } from "../hooks/useAuth";
+import LoadingSpinner from "./LoadingSpinner";
 
 const Home = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [placement, setPlacement] = React.useState("right");
+  const { isLoggedIn, isLoading } = useAuth();
 
   useEffect(() => {
     onOpen();
@@ -31,6 +35,10 @@ const Home = () => {
       window.removeEventListener("mousemove", handleMouseMove);
     };
   }, [onOpen]);
+
+  if (isLoading || !isLoggedIn) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="w-full min-h-screen flex bg-gray-50">
