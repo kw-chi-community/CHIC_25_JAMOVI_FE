@@ -19,7 +19,8 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo "${{ secrets.ENV }}" > .env
+          mkdir -p jamovi/
+          echo "${{ secrets.ENV }}" > jamovi/.env
 
       - name: Build and tag Docker image
         run: |

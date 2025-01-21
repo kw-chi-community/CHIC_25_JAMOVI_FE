@@ -3,6 +3,7 @@ FROM node:22-alpine as build
 WORKDIR /app
 
 COPY ./jamovi/package*.json ./
+COPY ./jamovi/.env ./
 RUN npm install
 
 COPY ./jamovi/ .
