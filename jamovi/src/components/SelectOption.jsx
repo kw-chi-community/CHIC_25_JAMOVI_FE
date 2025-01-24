@@ -58,7 +58,7 @@ const SelectOption = () => {
             </div>
             <Checkbox className="ml-5 w-full">기술 통계</Checkbox>
             <Checkbox className="ml-5 w-full">기술 통계 도표</Checkbox>
-            <h1 className="font-bold">가정정검증</h1>
+            <h1 className="font-bold">가정검증</h1>
             <Checkbox className="ml-5 w-full">정규분포성 검증</Checkbox>
             <Checkbox className="ml-5 w-full">Q-Q 도표</Checkbox>
           </div>
