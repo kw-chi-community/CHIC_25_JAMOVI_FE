@@ -13,6 +13,7 @@ import {
 import Sidebar from "./Sidebar";
 import DataTable from "./DataTable";
 import SelectOption from "./SelectOption";
+import Result from "./Result";
 import { Spinner, Text, VStack } from "@chakra-ui/react";
 import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "./LoadingSpinner";
@@ -45,6 +46,9 @@ const Home = () => {
       <div className="w-1/2 min-h-full">
         <DataTable />
         <SelectOption />
+      </div>
+      <div className="w-1/2 min-h-full">
+        <Result />
       </div>
       <Drawer placement={placement} onClose={onClose} isOpen={isOpen}>
         <DrawerOverlay />
