@@ -5,7 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import Home from "./components/Home";
-
+import SocketTest from "./components/SocketTest";
 import { ChakraProvider } from "@chakra-ui/react";
 
 function App() {
@@ -17,6 +17,7 @@ function App() {
           <Route path="/login" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
           <Route path="/home" element={<Home />} />
+          <Route path="/socket_test" element={<SocketTest />} />
         </Routes>
       </Router>
     </ChakraProvider>
