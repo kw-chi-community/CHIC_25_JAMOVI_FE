@@ -12,25 +12,25 @@ const DataTable = () => {
   };
 
   return (
-    <div className="pb-2 p-4">
+    <div className="min-h-1/2 pb-2 p-4">
       <table className="border-collapse w-full border border-gray-300">
         <thead>
           <tr>
-            <th className="border border-gray-300 p-2 bg-gray-100"></th>
+            <th className="border border-gray-300 p-1 bg-gray-100"></th>
             {Array.from({ length: 20 }, (_, index) => (
               <th
                 key={index}
-                className="border border-gray-300 py-2 bg-gray-100 w-1/20"
+                className="border border-gray-300 py-1 bg-gray-100 w-1/20"
               >
                 {index + 1}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white">
           {data.map((row, rowIndex) => (
             <tr key={rowIndex}>
-              <td className="border border-gray-300 p-2 text-center">
+              <td className="border border-gray-300 p-1 text-center">
                 {rowIndex + 1}
               </td>
               {row.map((cell, colIndex) => (
@@ -41,7 +41,7 @@ const DataTable = () => {
                     onChange={(e) =>
                       handleChange(rowIndex, colIndex, e.target.value)
                     }
-                    className="border-none outline-none py-2 w-full"
+                    className="border-none outline-none w-full"
                     placeholder={`Row ${rowIndex + 1}, Col ${colIndex + 1}`}
                   />
                 </td>
