@@ -1,61 +1,27 @@
-import React, { useState, useEffect } from "react";
+// src/components/SelectProject.jsx
+import React from "react";
 import { Card, Button, Spinner, Text, useToast } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom"; // 페이지 이동을 위한 useNavigate 훅
+import useProj from "../hooks/useProj"; // useProj 훅 임포트
 
 const SelectProject = () => {
-  const [projects, setProjects] = useState([]); // 프로젝트 목록 상태
-  const [isLoading, setIsLoading] = useState(false); // 로딩 상태
-  const [error, setError] = useState(null); // 오류 상태
+  const { projects, isLoading, error, fetchProjects } = useProj(); // useProj 훅 사용
   const navigate = useNavigate(); // 페이지 이동을 위한 훅
   const toast = useToast(); // 사용자에게 알림을 표시하기 위한 훅
 
-  // 프로젝트 데이터를 불러오는 함수
-  const fetchProjects = async (token) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/projects`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // 데이터가 배열인지 확인하고 상태 업데이트
-      if (Array.isArray(data)) {
-        setProjects(data);
-      } else {
-        throw new Error("데이터 형식이 올바르지 않습니다.");
-      }
-    } catch (err) {
-      setError(err.message || "프로젝트를 불러오는 중 오류가 발생했습니다.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      fetchProjects(token);
-    }
-  }, []);
-
+  // 새 프로젝트 만들기 버튼 클릭 핸들러
   const handleCreateProject = () => {
     navigate("/create-project");
   };
 
+  // 프로젝트 선택 시의 핸들러 (예: 프로젝트 상세 페이지로 이동)
   const handleSelectProject = (projectId) => {
-    navigate(`/home`);
+    navigate(`/projects/${projectId}`);
+  };
+
+  // 다시 시도 버튼 클릭 핸들러
+  const handleRetry = () => {
+    fetchProjects();
   };
 
   return (
@@ -64,6 +30,7 @@ const SelectProject = () => {
         <h1 className="text-2xl font-bold mb-4">프로젝트 목록</h1>
         <hr className="my-5" />
 
+        {/* 로딩 상태 표시 */}
         {isLoading && (
           <div className="flex justify-center items-center my-4">
             <Spinner size="lg" />
@@ -71,10 +38,11 @@ const SelectProject = () => {
           </div>
         )}
 
+        {/* 오류 상태 표시 */}
         {error && (
           <div className="flex flex-col items-center my-4">
             <Text className="text-red-500 mb-2">오류: {error}</Text>
-            <Button onClick={fetchProjects} colorScheme="teal">
+            <Button onClick={handleRetry} colorScheme="teal">
               다시 시도
             </Button>
           </div>
