@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { Card, CardBody, CardHeader, Button, Collapse } from "@chakra-ui/react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
@@ -46,6 +48,12 @@ const SortableItemComponent = ({ id }) => {
 };
 
 const Result = () => {
+  const navigate = useNavigate();
+
+  const handleNavigateToLogin = () => {
+    navigate("/login");
+  };
+
   const [items, setItems] = useState(["1", "2", "3"]);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -85,7 +93,9 @@ const Result = () => {
                   <div className="w-1/2 flex justify-end space-x-4">
                     <Button variant="solid">export</Button>
                     <Button variant="solid">new project</Button>
-                    <Button variant="solid">logout</Button>
+                    <Button variant="solid" onClick={handleNavigateToLogin}>
+                      logout
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
