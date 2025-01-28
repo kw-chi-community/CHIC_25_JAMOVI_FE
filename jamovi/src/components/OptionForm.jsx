@@ -10,22 +10,67 @@ import {
 } from "@chakra-ui/react";
 
 const OptionForm = () => {
-  const [hypothesisValue, setHypothesisValue] = useState("1"); // 가설 라디오 그룹 상태
-  const [missingValue, setMissingValue] = useState("1"); // 결측 값 라디오 그룹 상태
+  const [hypothesisValue, setHypothesisValue] = useState("1");
+  const [missingValue, setMissingValue] = useState("1");
+  const [studentChecked, setStudentChecked] = useState(true);
+  const [bayesChecked, setBayesChecked] = useState(false);
+  const [priorValue, setPriorValue] = useState(""); // 사전 값 상태 추가
+  const [wilcoxonChecked, setWilcoxonChecked] = useState(false);
+  const [meanDifferenceChecked, setMeanDifferenceChecked] = useState(false);
+  const [confidenceInterval, setConfidenceInterval] = useState("95");
+  const [effectSizeChecked, setEffectSizeChecked] = useState(false);
+  const [effectSize, setEffectSize] = useState("95");
+  const [descriptiveStatsChecked, setDescriptiveStatsChecked] = useState(false);
+  const [descriptiveStatsChartChecked, setDescriptiveStatsChartChecked] =
+    useState(false);
+  const [normalityChecked, setNormalityChecked] = useState(false);
+  const [qqPlotChecked, setQqPlotChecked] = useState(false);
 
   return (
     <div className="pt-2 pr-2 p-4 w-full">
       <Card>
         <CardBody className="flex">
-          <div className="w-1/2">
+          <div className="flex flex-col w-1/2">
             <h1 className="font-bold">검증</h1>
-            <Checkbox defaultChecked className="ml-5 w-full">
+            <Checkbox
+              isChecked={studentChecked}
+              onChange={() => setStudentChecked(!studentChecked)}
+              className="ml-5"
+            >
               Student's
             </Checkbox>
-            <Checkbox className="ml-10 w-full">베이즈 계수</Checkbox>
-            <span className="ml-[4rem] mr-2 w-full text-gray-400">사전</span>
-            <Input size="xs" htmlSize={4} width="auto" />
-            <Checkbox className="ml-5 w-full">Wilcoxon rank</Checkbox>
+            <Checkbox
+              isChecked={bayesChecked}
+              onChange={() => setBayesChecked(!bayesChecked)}
+              className="ml-10"
+            >
+              베이즈 계수
+            </Checkbox>
+            <div className="flex">
+              <span
+                className={`ml-[4rem] mr-2  ${
+                  !bayesChecked && "opacity-50 cursor-not-allowed"
+                }`}
+              >
+                사전
+              </span>
+              <Input
+                size="xs"
+                htmlSize={4}
+                width="auto"
+                value={priorValue}
+                onChange={(e) => setPriorValue(e.target.value)}
+                isDisabled={!bayesChecked} // 베이즈 계수가 체크되지 않으면 비활성화
+              />
+            </div>
+
+            <Checkbox
+              isChecked={wilcoxonChecked}
+              onChange={() => setWilcoxonChecked(!wilcoxonChecked)}
+              className="ml-5"
+            >
+              Wilcoxon rank
+            </Checkbox>
             <h1 className="font-bold">가설</h1>
             <RadioGroup onChange={setHypothesisValue} value={hypothesisValue}>
               <div className="flex flex-col ml-5">
@@ -44,23 +89,109 @@ const OptionForm = () => {
           </div>
           <div className="w-1/2">
             <h1 className="font-bold">추가 통계</h1>
-            <Checkbox className="ml-5 w-full">평균 차이</Checkbox>
+            <Checkbox
+              isChecked={meanDifferenceChecked}
+              onChange={() => setMeanDifferenceChecked(!meanDifferenceChecked)}
+              className="ml-5 w-full"
+            >
+              평균 차이
+            </Checkbox>
             <div className="w-full flex">
-              <Checkbox className="ml-10 text-gray-400">신뢰구간</Checkbox>
-              <Input size="xs" htmlSize={4} width="auto" />
-              <span className=" text-gray-400">%</span>
+              <Checkbox
+                isChecked={meanDifferenceChecked && confidenceInterval !== ""}
+                onChange={() =>
+                  setConfidenceInterval(confidenceInterval === "" ? "1" : "")
+                }
+                className={`ml-10 ${
+                  meanDifferenceChecked ? "" : "opacity-50 cursor-not-allowed"
+                }`}
+                isDisabled={!meanDifferenceChecked}
+              >
+                신뢰구간
+              </Checkbox>
+              <Input
+                size="xs"
+                htmlSize={4}
+                width="auto"
+                value={confidenceInterval}
+                onChange={(e) => setConfidenceInterval(e.target.value)}
+                isDisabled={!meanDifferenceChecked} // 평균 차이가 체크되지 않으면 비활성화
+              />
+              <span
+                className={`text-gray-400 ${
+                  meanDifferenceChecked ? "" : "opacity-50 cursor-not-allowed"
+                }`}
+              >
+                %
+              </span>
             </div>
-            <Checkbox className="ml-5 w-full">효과 크기</Checkbox>
+            <Checkbox
+              isChecked={effectSizeChecked}
+              onChange={() => setEffectSizeChecked(!effectSizeChecked)}
+              className="ml-5 w-full"
+            >
+              효과 크기
+            </Checkbox>
             <div className="w-full flex">
-              <Checkbox className="ml-10 text-gray-400">효과 크기</Checkbox>
-              <Input size="xs" htmlSize={4} width="auto" />
-              <span className=" text-gray-400">%</span>
+              <Checkbox
+                isChecked={effectSizeChecked && effectSize !== ""}
+                onChange={() => setEffectSize(effectSize === "" ? "1" : "")}
+                className={`ml-10 ${
+                  effectSizeChecked ? "" : "opacity-50 cursor-not-allowed"
+                }`}
+                isDisabled={!effectSizeChecked}
+              >
+                효과 크기
+              </Checkbox>
+              <Input
+                size="xs"
+                htmlSize={4}
+                width="auto"
+                value={effectSize}
+                onChange={(e) => setEffectSize(e.target.value)}
+                isDisabled={!effectSizeChecked} // 효과 크기가 체크되지 않으면 비활성화
+              />
+              <span
+                className={`text-gray-400 ${
+                  effectSizeChecked ? "" : "opacity-50 cursor-not-allowed"
+                }`}
+              >
+                %
+              </span>
             </div>
-            <Checkbox className="ml-5 w-full">기술 통계</Checkbox>
-            <Checkbox className="ml-5 w-full">기술 통계 도표</Checkbox>
+            <Checkbox
+              isChecked={descriptiveStatsChecked}
+              onChange={() =>
+                setDescriptiveStatsChecked(!descriptiveStatsChecked)
+              }
+              className="ml-5 w-full"
+            >
+              기술 통계
+            </Checkbox>
+            <Checkbox
+              isChecked={descriptiveStatsChartChecked}
+              onChange={() =>
+                setDescriptiveStatsChartChecked(!descriptiveStatsChartChecked)
+              }
+              className="ml-5 w-full"
+            >
+              기술 통계 도표
+            </Checkbox>
             <h1 className="font-bold">가정검증</h1>
-            <Checkbox className="ml-5 w-full">정규분포성 검증</Checkbox>
-            <Checkbox className="ml-5 w-full">Q-Q 도표</Checkbox>
+            <Checkbox
+              isChecked={normalityChecked}
+              onChange={() => setNormalityChecked(!normalityChecked)}
+              className="ml-5 w-full"
+            >
+              정규분포성 검증
+            </Checkbox>
+            <Checkbox
+              isChecked={qqPlotChecked}
+              onChange={() => setQqPlotChecked(!qqPlotChecked)}
+              className="ml-5 w-full"
+            >
+              Q-Q 도표
+            </Checkbox>
           </div>
         </CardBody>
       </Card>
