@@ -9,7 +9,7 @@ import {
   Stack,
 } from "@chakra-ui/react";
 
-const SelectOption = () => {
+const OptionForm = () => {
   const [hypothesisValue, setHypothesisValue] = useState("1"); // 가설 라디오 그룹 상태
   const [missingValue, setMissingValue] = useState("1"); // 결측 값 라디오 그룹 상태
 
@@ -68,4 +68,4 @@ const SelectOption = () => {
   );
 };
 
-export default SelectOption;
+export default OptionForm;
