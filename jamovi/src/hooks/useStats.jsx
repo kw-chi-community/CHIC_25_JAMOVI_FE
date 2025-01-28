@@ -87,7 +87,7 @@ const useStats = (formState, debounceDelay = 500) => {
       };
 
       //   postData();
-      console.log("postdata test"); // 연결할 때 지워
+      console.log("postdata test", data); // 연결할 때 지워
     }, debounceDelay);
 
     // 클린업 함수: 컴포넌트가 언마운트되거나 상태가 변경되기 전에 타이머를 정리
