@@ -14,7 +14,7 @@ const SelectOption = () => {
   const [missingValue, setMissingValue] = useState("1"); // 결측 값 라디오 그룹 상태
 
   return (
-    <div className="pt-2 p-4 w-full">
+    <div className="pt-2 pr-2 p-4 w-full">
       <Card>
         <CardBody className="flex">
           <div className="w-1/2">
@@ -58,7 +58,7 @@ const SelectOption = () => {
             </div>
             <Checkbox className="ml-5 w-full">기술 통계</Checkbox>
             <Checkbox className="ml-5 w-full">기술 통계 도표</Checkbox>
-            <h1 className="font-bold">가정정검증</h1>
+            <h1 className="font-bold">가정검증</h1>
             <Checkbox className="ml-5 w-full">정규분포성 검증</Checkbox>
             <Checkbox className="ml-5 w-full">Q-Q 도표</Checkbox>
           </div>
