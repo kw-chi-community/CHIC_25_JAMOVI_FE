@@ -1,26 +1,27 @@
 // src/hooks/useProj.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 
 /**
  * useProj 커스텀 훅
  *
- * 프로젝트 데이터를 불러오고 상태를 관리합니다.
- *
- * @returns {Object} - 프로젝트 목록, 로딩 상태, 오류 상태, 다시 시도 함수
+ * 프로젝트 목록을 가져오고, 새로운 프로젝트를 생성하는 기능을 제공합니다.
  */
 const useProj = () => {
-  const [projects, setProjects] = useState([]); // 프로젝트 목록 상태
-  const [isLoading, setIsLoading] = useState(false); // 로딩 상태
-  const [error, setError] = useState(null); // 오류 상태
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // 프로젝트 데이터를 불러오는 함수
-  const fetchProjects = useCallback(async () => {
+  /**
+   * 프로젝트 목록을 백엔드에서 가져옵니다.
+   * @returns {Promise<void>}
+   */
+  const fetchProjects = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        throw new Error("인증 토큰이 없습니다. 로그인해주세요.");
+        throw new Error("인증 토큰이 없습니다. 다시 로그인해주세요.");
       }
 
       const response = await fetch(
@@ -40,7 +41,6 @@ const useProj = () => {
 
       const data = await response.json();
 
-      // 데이터가 배열인지 확인하고 상태 업데이트
       if (Array.isArray(data)) {
         setProjects(data);
       } else {
@@ -51,14 +51,61 @@ const useProj = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
-  // 컴포넌트 마운트 시 프로젝트 데이터 불러오기
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+  /**
+   * 새로운 프로젝트를 생성합니다.
+   * @param {Object} projectData - 생성할 프로젝트의 데이터
+   * @param {string} projectData.name - 프로젝트 이름
+   * @param {string} [projectData.description] - 프로젝트 설명
+   * @returns {Promise<Object>} 생성된 프로젝트 데이터
+   */
+  const createProject = async ({ name, description = "" }) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다. 다시 로그인해주세요.");
+      }
 
-  return { projects, isLoading, error, fetchProjects };
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/projects/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ name, description }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const newProject = await response.json();
+      setProjects((prevProjects) => [...prevProjects, newProject]);
+      return newProject;
+    } catch (err) {
+      setError(err.message || "프로젝트를 생성하는 중 오류가 발생했습니다.");
+      throw err; // 호출자에게 오류를 전달
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return {
+    projects,
+    isLoading,
+    error,
+    fetchProjects,
+    createProject,
+  };
 };
 
 export default useProj;

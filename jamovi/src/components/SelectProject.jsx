@@ -1,27 +1,37 @@
 // src/components/SelectProject.jsx
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, Button, Spinner, Text, useToast } from "@chakra-ui/react";
-import { useNavigate } from "react-router-dom"; // 페이지 이동을 위한 useNavigate 훅
+import { useNavigate } from "react-router-dom";
 import useProj from "../hooks/useProj"; // useProj 훅 임포트
 
 const SelectProject = () => {
-  const { projects, isLoading, error, fetchProjects } = useProj(); // useProj 훅 사용
-  const navigate = useNavigate(); // 페이지 이동을 위한 훅
-  const toast = useToast(); // 사용자에게 알림을 표시하기 위한 훅
+  const { projects, isLoading, error, fetchProjects } = useProj();
+  const navigate = useNavigate();
+  const toast = useToast();
 
-  // 새 프로젝트 만들기 버튼 클릭 핸들러
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "오류",
+        description: error,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }, [error, toast]);
+
   const handleCreateProject = () => {
     navigate("/create-project");
   };
 
-  // 프로젝트 선택 시의 핸들러 (예: 프로젝트 상세 페이지로 이동)
   const handleSelectProject = (projectId) => {
-    navigate(`/projects/${projectId}`);
-  };
-
-  // 다시 시도 버튼 클릭 핸들러
-  const handleRetry = () => {
-    fetchProjects();
+    // navigate(`/projects/${projectId}`);
+    console("프로젝트 선택했는데 프로젝트 여는 기능을 구현 안함");
   };
 
   return (
@@ -30,21 +40,10 @@ const SelectProject = () => {
         <h1 className="text-2xl font-bold mb-4">프로젝트 목록</h1>
         <hr className="my-5" />
 
-        {/* 로딩 상태 표시 */}
         {isLoading && (
           <div className="flex justify-center items-center my-4">
             <Spinner size="lg" />
             <Text className="ml-2">프로젝트를 불러오는 중...</Text>
-          </div>
-        )}
-
-        {/* 오류 상태 표시 */}
-        {error && (
-          <div className="flex flex-col items-center my-4">
-            <Text className="text-red-500 mb-2">오류: {error}</Text>
-            <Button onClick={handleRetry} colorScheme="teal">
-              다시 시도
-            </Button>
           </div>
         )}
 
