@@ -12,7 +12,7 @@ const DataTable = () => {
   };
 
   return (
-    <div className="min-h-1/2 pb-2 p-4">
+    <div className="min-h-1/2 pb-2 pr-2 p-4">
       <table className="border-collapse w-full border border-gray-300">
         <thead>
           <tr>

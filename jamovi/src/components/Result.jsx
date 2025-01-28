@@ -73,7 +73,7 @@ const Result = () => {
       onDragEnd={handleDragEnd}
       modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
     >
-      <div className="p-4 w-full h-full">
+      <div className="pl-2 p-4 w-full h-full">
         <Card className="w-full h-full">
           <div className="w-full px-6">
             <Collapse in={!isCollapsed} animateOpacity>

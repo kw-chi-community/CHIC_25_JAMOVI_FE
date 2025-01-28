@@ -14,7 +14,7 @@ const SelectOption = () => {
   const [missingValue, setMissingValue] = useState("1"); // 결측 값 라디오 그룹 상태
 
   return (
-    <div className="pt-2 p-4 w-full">
+    <div className="pt-2 pr-2 p-4 w-full">
       <Card>
         <CardBody className="flex">
           <div className="w-1/2">
