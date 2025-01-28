@@ -14,7 +14,7 @@ const Home = () => {
 
   return (
     <div className="w-full min-h-screen flex bg-gray-50">
-      <div className="w-1/2 min-h-full">
+      <div className="w-1/2 min-h-full flex flex-col justify-between">
         <DataTable />
         <SelectOption />
       </div>
