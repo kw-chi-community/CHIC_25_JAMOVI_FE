@@ -3,6 +3,7 @@ import { Card, CardBody, CardHeader, Button } from "@chakra-ui/react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   restrictToVerticalAxis,
   restrictToWindowEdges,
@@ -21,18 +22,32 @@ const SortableItemComponent = ({ id }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className="flex justify-between items-center border border-gray-300 p-2 mb-2 bg-white rounded shadow"
+      className="flex justify-between p-2 mb-2 items-start border border-transparent hover:border-gray-300 hover:bg-white hover:rounded hover:shadow transition-colors duration-100"
     >
-      <span className="handle cursor-grab" {...attributes} {...listeners}>
+      <span
+        className="handle cursor-grab text-gray-300"
+        {...attributes}
+        {...listeners}
+      >
         ☰
       </span>
-      <span>{id}</span>
+      <div className="flex-grow">
+        <div className="px-2">
+          <h1>대응표본 T 검증</h1>
+          <p>
+            본 연구 결과 p값은 0.189로 유의미한지는 모르겠지만 어쨌든 결과가
+            나왔습니다. 이 자리에는 이런 식으로 llm이 생성해준 값을 대충
+            집어넣을 예정입니다. 로렘잇섬어쩌고저쩌고
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
 
 const Result = () => {
   const [items, setItems] = useState(["1", "2", "3"]);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -49,29 +64,73 @@ const Result = () => {
     }
   };
 
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
   return (
     <DndContext
       onDragEnd={handleDragEnd}
       modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
     >
       <div className="p-4 w-full h-full">
-        <Card className="h-full">
-          <CardHeader className="w-full flex">
-            <h1 className="w-1/2">결과</h1>
-            <div className="w-1/2 flex justify-end space-x-4">
-              <Button variant={"solid"}>export</Button>
-              <Button variant={"solid"}>new project</Button>
-              <Button variant={"solid"}>logout</Button>
+        <Card className="w-full h-full">
+          <div className="w-full px-6">
+            {!isCollapsed && (
+              <>
+                <div className="w-full flex items-center my-4">
+                  <div className="w-1/2">
+                    <h1>결과</h1>
+                  </div>
+                  <div className="w-1/2 flex justify-end space-x-4">
+                    <Button variant="solid">export</Button>
+                    <Button variant="solid">new project</Button>
+                    <Button variant="solid">logout</Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleCollapse}
+                      className="p-0"
+                    >
+                      {isCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <hr />
+              </>
+            )}
+          </div>
+          <div className="h-full px-5">
+            {isCollapsed && <div className="m-5" />}
+
+            <div className="flex w-full h-full">
+              <div className="w-3/4">
+                <SortableContext items={items}>
+                  {items.map((id) => (
+                    <SortableItemComponent key={id} id={id} />
+                  ))}
+                </SortableContext>
+              </div>
+
+              <div className="w-1/4 h-full border-l border-gray-200">
+                {isCollapsed && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleCollapse}
+                    className="flex w-full"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                )}
+                <div>asdfasdf</div>
+              </div>
             </div>
-          </CardHeader>
-          <hr className="mx-5" />
-          <CardBody>
-            <SortableContext items={items}>
-              {items.map((id) => (
-                <SortableItemComponent key={id} id={id} />
-              ))}
-            </SortableContext>
-          </CardBody>
+          </div>
         </Card>
       </div>
     </DndContext>
