@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardBody, CardHeader, Button } from "@chakra-ui/react";
+import { Card, CardBody, CardHeader, Button, Collapse } from "@chakra-ui/react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -22,7 +22,7 @@ const SortableItemComponent = ({ id }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className="flex justify-between p-2 mb-2 items-start border border-transparent hover:border-gray-300 hover:bg-white hover:rounded hover:shadow transition-colors duration-100"
+      className="flex justify-between p-2 mb-2 items-start hover:bg-[#EDF2F7] rounded transition-colors duration-100"
     >
       <span
         className="handle cursor-grab text-gray-300"
@@ -76,8 +76,8 @@ const Result = () => {
       <div className="p-4 w-full h-full">
         <Card className="w-full h-full">
           <div className="w-full px-6">
-            {!isCollapsed && (
-              <>
+            <Collapse in={!isCollapsed} animateOpacity>
+              <div className="transition-all">
                 <div className="w-full flex items-center my-4">
                   <div className="w-1/2">
                     <h1>결과</h1>
@@ -101,14 +101,15 @@ const Result = () => {
                   </div>
                 </div>
                 <hr />
-              </>
-            )}
+              </div>
+            </Collapse>
           </div>
           <div className="h-full px-5">
             {isCollapsed && <div className="m-5" />}
 
             <div className="flex w-full h-full">
-              <div className="w-3/4">
+              <div className="w-3/4 pt-0 pl-0 p-5">
+                {!isCollapsed && <div className="pt-5" />}
                 <SortableContext items={items}>
                   {items.map((id) => (
                     <SortableItemComponent key={id} id={id} />
@@ -116,17 +117,17 @@ const Result = () => {
                 </SortableContext>
               </div>
 
-              <div className="w-1/4 h-full border-l border-gray-200">
-                {isCollapsed && (
+              <div className="w-1/4 h-full pl-5 border-l border-gray-200">
+                <Collapse in={isCollapsed} animateOpacity>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={toggleCollapse}
-                    className="flex w-full"
+                    className="flex w-full mb-2"
                   >
                     <ChevronDown className="h-4 w-4" />
                   </Button>
-                )}
+                </Collapse>
                 <div>asdfasdf</div>
               </div>
             </div>
