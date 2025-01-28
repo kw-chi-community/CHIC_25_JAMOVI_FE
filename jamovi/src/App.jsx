@@ -5,7 +5,7 @@ import "./index.css";
 import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import Home from "./components/Home";
-
+import SocketTest from "./components/SocketTest";
 import { ChakraProvider } from "@chakra-ui/react";
 import { DndContext } from "@dnd-kit/core";
 
