@@ -14,7 +14,8 @@ import axios from "axios";
 const StatisticalTest = () => {
   const { isLoggedIn, isLoading } = useAuth();
   const [messages, setMessages] = useState([]);
-  const [projectId, setProjectId] = useState("");
+  const [projectId, setProjectId] = useState(1);
+  const [testResults, setTestResults] = useState(null);
 
   const [testType, setTestType] = useState("OneWayANOVA");
   const [hypothesis, setHypothesis] = useState("RightTailed");
@@ -24,8 +25,9 @@ const StatisticalTest = () => {
   const [effectSizeValue, setEffectSizeValue] = useState(0.06);
   const [descriptiveStats, setDescriptiveStats] = useState(true);
   const [testData, setTestData] = useState({
-    school: [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    home: [5, 4, 7, 8, 6, 5, 4, 5, 4],
+    group1: [1, 2, 1, 3, 2, 1],
+    group2: [5, 4, 5, 5, 3, 4],
+    group3: [5, 4, 5, 5, 3, 4],
   }); // anova의 경우 무한히 추가 가능, one sample t test는 그룹 하나만, paired랑 independent는 그룹 두 개
 
   const sendTestData = async () => {
@@ -55,6 +57,7 @@ const StatisticalTest = () => {
       );
 
       if (response.data.success) {
+        setTestResults(response.data.result);
         setMessages((prev) => [...prev, "goood!"]);
       } else {
         setMessages((prev) => [...prev, response.data.message]);
@@ -110,6 +113,14 @@ const StatisticalTest = () => {
         <Button colorScheme="blue" onClick={sendTestData}>
           Send Test Data
         </Button>
+
+        {testResults && (
+          <Box borderWidth="1px" borderRadius="lg" p={4}>
+            <pre style={{ whiteSpace: "pre-wrap" }}>
+              {JSON.stringify(testResults, null, 2)}
+            </pre>
+          </Box>
+        )}
 
         <Box>
           <Text fontWeight="bold">Messages:</Text>
