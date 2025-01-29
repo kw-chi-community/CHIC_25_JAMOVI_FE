@@ -8,7 +8,7 @@ import Home from "./components/Home";
 import SocketTest from "./components/SocketTest";
 import { ChakraProvider } from "@chakra-ui/react";
 import { DndContext } from "@dnd-kit/core";
-
+import StatisticalTest from "./components/StatisticalTest";
 function App() {
   return (
     <ChakraProvider>
@@ -19,6 +19,7 @@ function App() {
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/home" element={<Home />} />
+            <Route path="/statistics_test" element={<StatisticalTest />} />
           </Routes>
         </Router>
       </DndContext>
