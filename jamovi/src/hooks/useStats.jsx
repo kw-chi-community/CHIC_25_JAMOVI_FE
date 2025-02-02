@@ -10,50 +10,22 @@ import { useEffect } from "react";
  */
 const useStats = (formState, debounceDelay = 500) => {
   useEffect(() => {
-    // 상태를 적절한 JSON 형식으로 변환하는 함수
+    // 폼 상태를 아래의 JSON 형식에 맞게 변환
     const prepareData = () => ({
-      validation: {
-        student: formState.studentChecked,
-        bayesianCoefficient: formState.bayesChecked,
-        prior: formState.bayesChecked ? formState.priorValue : null,
-      },
-      tests: {
-        wilcoxonRank: formState.wilcoxonChecked,
-      },
-      hypothesis: {
-        id: formState.hypothesisValue,
-        label:
-          formState.hypothesisValue === "1"
-            ? "측정 1 ≠ 측정 2"
-            : formState.hypothesisValue === "2"
-            ? "측정 1 > 측정 2"
-            : "측정 1 < 측정 2",
-      },
-      missingValueHandling: {
-        id: formState.missingValue,
-        label:
-          formState.missingValue === "1"
-            ? "대응별 결측값 제거(pairwise)"
-            : "목록별 결측값 제거(listwise)",
-      },
-      additionalStatistics: {
-        meanDifference: formState.meanDifferenceChecked,
-        confidenceInterval:
-          formState.meanDifferenceChecked && formState.confidenceInterval
-            ? formState.confidenceInterval
-            : null,
-        effectSize: formState.effectSizeChecked,
-        effectSizeValue:
-          formState.effectSizeChecked && formState.effectSize
-            ? formState.effectSize
-            : null,
-        descriptiveStats: formState.descriptiveStatsChecked,
-        descriptiveStatsChart: formState.descriptiveStatsChartChecked,
-      },
-      assumptions: {
-        normality: formState.normalityChecked,
-        qqPlot: formState.qqPlotChecked,
-      },
+      test: formState.test, // "OneWayANOVA", "PairedTTest", "IndependentTTest", "OneSampleTTest"
+      hypothesis: formState.hypothesis, // "RightTailed", "TwoTailedSame", "TwoTailedDiff", "LeftTailed"
+      missingValueHandling: formState.missingValueHandling, // "pairwise" 또는 "ListwiseDeletion"
+      meanDifference: formState.meanDifference,
+      confidenceInterval: formState.confidenceInterval
+        ? Number(formState.confidenceInterval)
+        : null,
+      effectSize: formState.effectSize,
+      effectSizeValue: formState.effectSizeValue
+        ? Number(formState.effectSizeValue)
+        : null,
+      descriptiveStats: formState.descriptiveStats,
+      // 그룹별 데이터를 담은 객체 예시 (예: school, home 등)
+      value: formState.value,
     });
 
     const data = prepareData();
@@ -64,9 +36,8 @@ const useStats = (formState, debounceDelay = 500) => {
       const postData = async () => {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_BACKEND_URL}/api/submit-form`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/stats`, // 경로 예시 나중에 바꿔야함
             {
-              // 경로 예시 나중에 바꿔야함
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
