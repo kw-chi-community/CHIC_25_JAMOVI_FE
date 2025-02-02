@@ -8,55 +8,53 @@ import {
   RadioGroup,
   Button,
 } from "@chakra-ui/react";
+
 import useStats from "../hooks/useStats"; // useStats 훅 임포트
 
 const OptionForm = () => {
   // 폼 상태 관리
-  const [hypothesisValue, setHypothesisValue] = useState("1");
-  const [missingValue, setMissingValue] = useState("1");
-  const [studentChecked, setStudentChecked] = useState(true);
-  const [bayesChecked, setBayesChecked] = useState(false);
-  const [priorValue, setPriorValue] = useState("");
-  const [wilcoxonChecked, setWilcoxonChecked] = useState(false);
-  const [meanDifferenceChecked, setMeanDifferenceChecked] = useState(false);
+  const [test, setTest] = useState("OneWayANOVA");
+  const [hypothesis, setHypothesis] = useState("RightTailed");
+  const [missingValueHandling, setMissingValueHandling] = useState("pairwise");
+  const [meanDifference, setMeanDifference] = useState(false);
   const [confidenceInterval, setConfidenceInterval] = useState("95");
-  const [effectSizeChecked, setEffectSizeChecked] = useState(false);
-  const [effectSize, setEffectSize] = useState("95");
-  const [descriptiveStatsChecked, setDescriptiveStatsChecked] = useState(false);
-  const [descriptiveStatsChartChecked, setDescriptiveStatsChartChecked] =
-    useState(false);
-  const [normalityChecked, setNormalityChecked] = useState(false);
-  const [qqPlotChecked, setQqPlotChecked] = useState(false);
+  const [effectSize, setEffectSize] = useState("Eta_Squared");
+  const [effectSizeValue, setEffectSizeValue] = useState("0.06");
+  const [descriptiveStats, setDescriptiveStats] = useState(true);
+
+  // 변수 meta data
+  const [value, setValue] = useState({
+    school: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    home: [5, 4, 7, 8, 6, 5, 4, 5, 4],
+  });
 
   // 폼 상태 객체 생성
   const formState = {
-    hypothesisValue,
-    missingValue,
-    studentChecked,
-    bayesChecked,
-    priorValue,
-    wilcoxonChecked,
-    meanDifferenceChecked,
+    test,
+    hypothesis,
+    missingValueHandling,
+    meanDifference,
     confidenceInterval,
-    effectSizeChecked,
     effectSize,
-    descriptiveStatsChecked,
-    descriptiveStatsChartChecked,
-    normalityChecked,
-    qqPlotChecked,
+    effectSizeValue,
+    descriptiveStats,
+    value,
   };
 
   // useStats 훅 호출
   useStats(formState, 500); // 500ms 디바운스 적용
 
   // 상태 변경 핸들러
-  const toggleCheckbox = useCallback((setter) => {
-    setter((prev) => !prev);
-  }, []);
-
   const handleInputChange = useCallback(
     (setter) => (e) => {
       setter(e.target.value);
+    },
+    []
+  );
+
+  const toggleCheckbox = useCallback(
+    (setter) => () => {
+      setter((prev) => !prev);
     },
     []
   );
@@ -75,7 +73,7 @@ const OptionForm = () => {
           {/* 왼쪽 컬럼 */}
           <div className="flex flex-col w-full lg:w-1/2 pr-4">
             {/* 검증 섹션 */}
-            <div className="mb-6">
+            {/* <div className="mb-6">
               <h1 className="font-bold text-lg mb-2">검증</h1>
               <div className="flex items-center ml-5 mb-2">
                 <Checkbox
@@ -121,19 +119,24 @@ const OptionForm = () => {
                   Wilcoxon rank
                 </Checkbox>
               </div>
-            </div>
+            </div> */}
 
             {/* 가설 섹션 */}
             <div className="mb-6">
               <h1 className="font-bold text-lg mb-2">가설</h1>
               <RadioGroup
-                onChange={handleRadioChange(setHypothesisValue)}
-                value={hypothesisValue}
+                onChange={handleRadioChange(setHypothesis)}
+                value={hypothesis}
               >
                 <div className="flex flex-col ml-5 space-y-1">
-                  <Radio value="1">측정 1 ≠ 측정 2</Radio>
-                  <Radio value="2">측정 1 &gt; 측정 2</Radio>
-                  <Radio value="3">측정 1 &lt; 측정 2</Radio>
+                  <Radio value="RightTailed">측정 1 &lt; 측정 2</Radio>
+                  <Radio value="TwoTailedSame">측정 1 = 측정 2</Radio>
+                  <Radio value="TwoTailedDiff">측정 1 ≠ 측정 2</Radio>
+                  <Radio value="RightTailed">측정 1 &gt; 측정 2</Radio>
+
+                  {/* <Radio value="RightTailed">측정 1 ≠ 측정 2</Radio>
+                  <Radio value="TwoTailedSame">측정 1 &gt; 측정 2</Radio>
+                  <Radio value="LeftTailed">측정 1 &lt; 측정 2</Radio> */}
                 </div>
               </RadioGroup>
             </div>
@@ -142,12 +145,14 @@ const OptionForm = () => {
             <div className="mb-6">
               <h1 className="font-bold text-lg mb-2">결측 값</h1>
               <RadioGroup
-                onChange={handleRadioChange(setMissingValue)}
-                value={missingValue}
+                onChange={handleRadioChange(setMissingValueHandling)}
+                value={missingValueHandling}
               >
                 <div className="flex flex-col ml-5 space-y-1">
-                  <Radio value="1">대응별 결측값 제거(pairwise)</Radio>
-                  <Radio value="2">목록별 결측값 제거(listwise)</Radio>
+                  <Radio value="pairwise">대응별 결측값 제거(pairwise)</Radio>
+                  <Radio value="ListwiseDeletion">
+                    목록별 결측값 제거(listwise)
+                  </Radio>
                 </div>
               </RadioGroup>
             </div>
@@ -160,16 +165,23 @@ const OptionForm = () => {
               <h1 className="font-bold text-lg mb-2">추가 통계</h1>
               <div className="flex items-center ml-5 mb-2">
                 <Checkbox
-                  isChecked={meanDifferenceChecked}
-                  onChange={() => toggleCheckbox(setMeanDifferenceChecked)}
+                  isChecked={meanDifference}
+                  onChange={() => toggleCheckbox(setMeanDifference)}
                   className="mr-2"
                 >
                   평균 차이
                 </Checkbox>
+                {/* <NativeSelectRoot>
+                  <NativeSelectField>
+                    <option value="1">Eta_Squared</option>
+                    <option value="2">Cohens_D</option>
+                    <option value="2">Standardized_Mean_Difference</option>
+                  </NativeSelectField>
+                </NativeSelectRoot> */}
               </div>
               <div
                 className={`flex items-center ml-10 mb-2 ${
-                  !meanDifferenceChecked ? "opacity-50 cursor-not-allowed" : ""
+                  !meanDifference ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
                 <Checkbox
@@ -187,11 +199,11 @@ const OptionForm = () => {
                   width="auto"
                   value={confidenceInterval}
                   onChange={handleInputChange(setConfidenceInterval)}
-                  isDisabled={!meanDifferenceChecked}
+                  isDisabled={!meanDifference}
                 />
                 <span
                   className={`text-gray-400 ml-1 ${
-                    meanDifferenceChecked ? "" : "opacity-50 cursor-not-allowed"
+                    meanDifference ? "" : "opacity-50 cursor-not-allowed"
                   }`}
                 >
                   %
@@ -200,21 +212,21 @@ const OptionForm = () => {
 
               <div className="flex items-center ml-5 mb-2">
                 <Checkbox
-                  isChecked={effectSizeChecked}
-                  onChange={() => toggleCheckbox(setEffectSizeChecked)}
+                  isChecked={effectSize}
+                  onChange={() => toggleCheckbox(setEffectSize)}
                   className="mr-2"
                 >
                   효과 크기
                 </Checkbox>
-                {effectSizeChecked && (
+                {effectSizeValue && (
                   <div className="flex items-center">
                     <Input
                       size="xs"
                       htmlSize={4}
                       width="auto"
-                      value={effectSize}
-                      onChange={handleInputChange(setEffectSize)}
-                      isDisabled={!effectSizeChecked}
+                      value={effectSizeValue}
+                      onChange={handleInputChange(setEffectSizeValue)}
+                      isDisabled={!effectSizeValue}
                     />
                     <span className="text-gray-400 ml-1">%</span>
                   </div>
@@ -223,8 +235,8 @@ const OptionForm = () => {
 
               <div className="flex items-center ml-5 mb-2">
                 <Checkbox
-                  isChecked={descriptiveStatsChecked}
-                  onChange={() => toggleCheckbox(setDescriptiveStatsChecked)}
+                  isChecked={descriptiveStats}
+                  onChange={() => toggleCheckbox(descriptiveStats)}
                   className="mr-2"
                 >
                   기술 통계
@@ -233,10 +245,8 @@ const OptionForm = () => {
 
               <div className="flex items-center ml-5 mb-2">
                 <Checkbox
-                  isChecked={descriptiveStatsChartChecked}
-                  onChange={() =>
-                    toggleCheckbox(setDescriptiveStatsChartChecked)
-                  }
+                  isChecked={descriptiveStats}
+                  onChange={() => toggleCheckbox(setDescriptiveStats)}
                   className="mr-2"
                 >
                   기술 통계 도표
@@ -245,7 +255,7 @@ const OptionForm = () => {
             </div>
 
             {/* 가정검증 섹션 */}
-            <div className="mb-6">
+            {/* <div className="mb-6">
               <h1 className="font-bold text-lg mb-2">가정검증</h1>
               <div className="flex items-center ml-5 mb-2">
                 <Checkbox
@@ -265,7 +275,7 @@ const OptionForm = () => {
                   Q-Q 도표
                 </Checkbox>
               </div>
-            </div>
+            </div> */}
           </div>
         </CardBody>
       </Card>
