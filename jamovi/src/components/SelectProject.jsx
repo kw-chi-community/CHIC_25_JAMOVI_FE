@@ -11,7 +11,7 @@ const SelectProject = () => {
 
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+  }, []);
 
   useEffect(() => {
     if (error) {
@@ -30,8 +30,7 @@ const SelectProject = () => {
   };
 
   const handleSelectProject = (projectId) => {
-    // navigate(`/projects/${projectId}`);
-    console("프로젝트 선택했는데 프로젝트 여는 기능을 구현 안함");
+    navigate(`/home?id=${projectId}`);
   };
 
   return (

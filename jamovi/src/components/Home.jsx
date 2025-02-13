@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import DataTable from "./DataTable";
 import OptionForm from "./OptionForm";
 import Result from "./Result";
@@ -7,6 +8,16 @@ import LoadingSpinner from "./LoadingSpinner";
 
 const Home = () => {
   const { isLoggedIn, isLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const projectId = searchParams.get("id");
+
+  useEffect(() => {
+    console.log("projectId", projectId);
+    if (!projectId) {
+      navigate("/project");
+    }
+  }, [projectId, navigate]);
 
   if (isLoading || !isLoggedIn) {
     return <LoadingSpinner />;

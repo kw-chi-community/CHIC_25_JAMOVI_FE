@@ -1,14 +1,78 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 
 const DataTable = () => {
   const [data, setData] = useState(
     Array.from({ length: 10 }, () => Array(20).fill(""))
   );
+  const [ws, setWs] = useState(null);
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("id");
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const websocket = new WebSocket(
+      `${
+        import.meta.env.VITE_WS_URL
+      }/projects/table?project_id=${projectId}&token=${token}`
+    );
+
+    websocket.onopen = () => {
+      console.log("ws connected!");
+    };
+
+    websocket.onmessage = (event) => {
+      const response = JSON.parse(event.data);
+      if (response.success) {
+        if (response.type === "initial_data") {
+          setData(response.data);
+        } else if (response.type === "update") {
+          setData((prevData) => {
+            const newData = [...prevData];
+            newData[response.row][response.col] = response.value;
+            return newData;
+          });
+        }
+      } else {
+        console.error("Error:", response.message);
+      }
+    };
+
+    websocket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    websocket.onclose = (event) => {
+      if (event.code === 4001) {
+        console.error("token not found");
+      } else if (event.code === 4002) {
+        console.error("invalid token");
+      }
+    };
+
+    setWs(websocket);
+
+    return () => {
+      websocket.close();
+    };
+  }, [projectId]);
 
   const handleChange = (rowIndex, colIndex, value) => {
-    const newData = [...data];
-    newData[rowIndex][colIndex] = value;
-    setData(newData);
+    setData((prevData) => {
+      const newData = [...prevData];
+      newData[rowIndex][colIndex] = value;
+      return newData;
+    });
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(
+        JSON.stringify({
+          row: rowIndex,
+          col: colIndex,
+          value: value,
+        })
+      );
+    }
   };
 
   return (
