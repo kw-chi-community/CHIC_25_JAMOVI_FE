@@ -70,7 +70,7 @@ const LoginForm = () => {
         if (data.success) {
           handleLogin(data.token);
           setError("");
-          navigate("/home");
+          navigate("/project");
         } else {
           setError("이메일과 비밀번호를 확인해주세요.");
         }

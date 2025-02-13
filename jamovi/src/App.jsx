@@ -5,7 +5,9 @@ import "./index.css";
 import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import Home from "./components/Home";
-import SocketTest from "./components/SocketTest";
+import SelectProject from "./components/SelectProject";
+import CreateProject from "./components/CreateProject";
+
 import { ChakraProvider } from "@chakra-ui/react";
 import { DndContext } from "@dnd-kit/core";
 
@@ -19,6 +21,8 @@ function App() {
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/home" element={<Home />} />
+            <Route path="/project" element={<SelectProject />} />
+            <Route path="/create-project" element={<CreateProject />} />
           </Routes>
         </Router>
       </DndContext>
