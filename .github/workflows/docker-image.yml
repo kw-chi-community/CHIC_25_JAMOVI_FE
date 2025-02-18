@@ -38,8 +38,8 @@ jobs:
     steps:
       - name: Install SSH and sshpass
         run: |
-          sudo apt-get update
-          sudo apt-get install -y openssh-client sshpass
+          sudo apt update
+          sudo apt install -y openssh-client sshpass
 
       - name: Log in to Docker Hub on the server
         run: |
