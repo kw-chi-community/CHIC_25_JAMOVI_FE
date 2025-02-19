@@ -99,6 +99,55 @@ const useProj = () => {
     }
   }, []);
 
+  /**
+   * 특정 프로젝트의 상세 정보를 가져오는
+   * @param {string|number} projectId - 프로젝트 ID
+   * @returns {Promise<Object>} 프로젝트 상세 정보 (노션 참고, 해당 테이블 전체 + 권한 정보)
+   */
+  const getProject = useCallback(async (projectId) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("!token");
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`!response.ok: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        id: data.id,
+        userId: data.user_id,
+        name: data.name,
+        visibility: data.visibility,
+        description: data.description,
+        permissions:
+          data.permissions?.map((perm) => ({
+            userId: perm.user_id,
+            isEditor: perm.is_editor,
+          })) || [],
+      };
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   return {
     projects,
@@ -106,6 +155,7 @@ const useProj = () => {
     error,
     fetchProjects,
     createProject,
+    getProject,
   };
 };
 
