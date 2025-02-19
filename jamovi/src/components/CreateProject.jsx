@@ -18,8 +18,9 @@ const CreateProject = () => {
   const [description, setDescription] = useState("");
   const [nameError, setNameError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const { createProject, error } = useProj();
+  const { createProject } = useProj();
   const navigate = useNavigate();
 
   const handleNameChange = useCallback((e) => {
@@ -42,16 +43,34 @@ const CreateProject = () => {
       return;
     }
 
+    if (name.length > 250) {
+      setNameError("프로젝트 이름이 너무 길어요. 250자 이내로 줄여주세요.");
+      return;
+    }
+
+    if (new Blob([description]).size > 60000) {
+      setError("프로젝트 설명이 너무 길어요. 길이를 줄여주세요.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const newProject = await createProject({
         name: name.trim(),
         description: description.trim(),
       });
+
+      if (!newProject.success) {
+        if (newProject.detail === "name is tooo long") {
+          setNameError("프로젝트 이름이 너무 길어요. 250자 이내로 줄여주세요.");
+        } else if (newProject.detail === "description is tooo long") {
+          setError("프로젝트 설명이 너무 길어요. 길이를 줄여주세요.");
+        }
+        return;
+      }
+
       navigate(`/home?id=${newProject.project_id}`);
     } catch (err) {
-      // 오류는 useProj 훅에서 처리되므로 추가적인 처리 필요 없음
-      // 필요 시 추가적인 오류 처리 로직을 구현할 수 있습니다.
       console.error("프로젝트 생성 오류:", err);
     } finally {
       setIsSubmitting(false);
