@@ -1,5 +1,5 @@
 // src/hooks/useProj.jsx
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 /**
  * useProj 커스텀 훅
@@ -15,7 +15,7 @@ const useProj = () => {
    * 프로젝트 목록을 백엔드에서 가져옵니다.
    * @returns {Promise<void>}
    */
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -51,7 +51,7 @@ const useProj = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   /**
    * 새로운 프로젝트를 생성합니다.
@@ -60,7 +60,7 @@ const useProj = () => {
    * @param {string} [projectData.description] - 프로젝트 설명
    * @returns {Promise<Object>} 생성된 프로젝트 데이터
    */
-  const createProject = async ({ name, description = "" }) => {
+  const createProject = useCallback(async ({ name, description = "" }) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -97,7 +97,8 @@ const useProj = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
 
   return {
     projects,
