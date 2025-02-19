@@ -48,8 +48,7 @@ const CreateProject = () => {
         name: name.trim(),
         description: description.trim(),
       });
-      // 성공 시 프로젝트 목록 페이지로 이동
-      navigate("/projects");
+      navigate(`/home?id=${newProject.project_id}`);
     } catch (err) {
       // 오류는 useProj 훅에서 처리되므로 추가적인 처리 필요 없음
       // 필요 시 추가적인 오류 처리 로직을 구현할 수 있습니다.
