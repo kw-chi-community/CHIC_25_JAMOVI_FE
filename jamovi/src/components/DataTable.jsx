@@ -1,119 +1,97 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { SpreadSheets, Worksheet } from "@mescius/spread-sheets-react";
+import "@mescius/spread-sheets/styles/gc.spread.sheets.excel2016colorful.css";
+import * as GC from "@mescius/spread-sheets";
+
+import useWebSocket from "../hooks/useWebSocket";
 
 const DataTable = () => {
-  const [data, setData] = useState(
-    Array.from({ length: 10 }, () => Array(20).fill(""))
-  );
-  const [ws, setWs] = useState(null);
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("id");
+  const token = localStorage.getItem("token");
+
+  const [data, setData, ws] = useWebSocket(projectId, token);
+
+  const wsRef = useRef(null);
+  const spreadRef = useRef(null);
+  const isTableInitialized = useRef(false); // 초기화 여부를 추적하는 플래그
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const websocket = new WebSocket(
-      `${
-        import.meta.env.VITE_WS_URL
-      }/projects/table?project_id=${projectId}&token=${token}`
-    );
+    if (ws) {
+      wsRef.current = ws;
+    }
+  }, [ws]);
 
-    websocket.onopen = () => {
-      console.log("ws connected!");
-    };
+  // data가 업데이트될 때, spreadRef가 준비되어 있고 아직 초기화되지 않았다면 한 번만 실행
+  useEffect(() => {
+    if (
+      !isTableInitialized.current &&
+      data &&
+      data.length > 0 &&
+      spreadRef.current
+    ) {
+      initTable();
+      isTableInitialized.current = true;
+    }
+  }, [data]);
 
-    websocket.onmessage = (event) => {
-      const response = JSON.parse(event.data);
-      if (response.success) {
-        if (response.type === "initial_data") {
-          setData(response.data);
-        } else if (response.type === "update") {
-          setData((prevData) => {
-            const newData = [...prevData];
-            newData[response.row][response.col] = response.value;
-            return newData;
-          });
-        }
-      } else {
-        console.error("Error:", response.message);
-      }
-    };
-
-    websocket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    websocket.onclose = (event) => {
-      if (event.code === 4001) {
-        console.error("token not found");
-      } else if (event.code === 4002) {
-        console.error("invalid token");
-      }
-    };
-
-    setWs(websocket);
-
-    return () => {
-      websocket.close();
-    };
-  }, [projectId]);
-
-  const handleChange = (rowIndex, colIndex, value) => {
-    setData((prevData) => {
-      const newData = [...prevData];
-      newData[rowIndex][colIndex] = value;
-      return newData;
+  const initTable = () => {
+    console.log("초기 데이터로 테이블 초기화:", data);
+    const sheet = spreadRef.current.getActiveSheet();
+    // data 배열의 각 요소를 순회하며 셀 업데이트
+    data.forEach((rowData, rowIndex) => {
+      rowData.forEach((cellData, colIndex) => {
+        sheet.setValue(rowIndex, colIndex, cellData);
+      });
     });
+  };
 
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(
+  // 웹소켓으로 데이터를 전송하는 함수
+  const sendData = (dataToSend) => {
+    const wsInstance = wsRef.current || ws;
+    const { row, col, newValue } = dataToSend;
+
+    if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
+      wsInstance.send(
         JSON.stringify({
-          row: rowIndex,
-          col: colIndex,
-          value: value,
+          row,
+          col,
+          value: newValue,
         })
       );
+      console.log("전송된 데이터:", { row, col, value: newValue });
+    } else {
+      console.log("WebSocket 연결이 준비되지 않음.");
     }
   };
 
+  // Spread 초기화 함수
+  const initSpread = (spread) => {
+    spreadRef.current = spread;
+    const sheet = spread.getActiveSheet();
+
+    sheet.bind(GC.Spread.Sheets.Events.ValueChanged, (event, args) => {
+      sendData(args);
+    });
+
+    // 스프레드 초기화 시, 이미 data가 있다면 초기화 실행
+    if (!isTableInitialized.current && data && data.length > 0) {
+      initTable();
+      isTableInitialized.current = true;
+    }
+  };
+
+  const hostStyle = {
+    width: "100%",
+    height: "400px",
+  };
+
   return (
-    <div className="min-h-1/2 pb-2 pr-2 p-4">
-      <table className="border-collapse w-full border border-gray-300">
-        <thead>
-          <tr>
-            <th className="border border-gray-300 p-1 bg-gray-100"></th>
-            {Array.from({ length: 20 }, (_, index) => (
-              <th
-                key={index}
-                className="border border-gray-300 py-1 bg-gray-100 w-1/20"
-              >
-                {index + 1}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white">
-          {data.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              <td className="border border-gray-300 p-1 text-center">
-                {rowIndex + 1}
-              </td>
-              {row.map((cell, colIndex) => (
-                <td key={colIndex} className="border border-gray-300 w-[5%]">
-                  <input
-                    type="text"
-                    value={cell}
-                    onChange={(e) =>
-                      handleChange(rowIndex, colIndex, e.target.value)
-                    }
-                    className="border-none outline-none w-full"
-                    placeholder={`Row ${rowIndex + 1}, Col ${colIndex + 1}`}
-                  />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div>
+      <SpreadSheets workbookInitialized={initSpread} hostStyle={hostStyle}>
+        <Worksheet />
+      </SpreadSheets>
     </div>
   );
 };

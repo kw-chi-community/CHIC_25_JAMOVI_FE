@@ -8,6 +8,8 @@ import Home from "./components/Home";
 import SelectProject from "./components/SelectProject";
 import CreateProject from "./components/CreateProject";
 
+import TableTest from "./components/TableTest";
+
 import { ChakraProvider } from "@chakra-ui/react";
 import { DndContext } from "@dnd-kit/core";
 
@@ -23,6 +25,7 @@ function App() {
             <Route path="/home" element={<Home />} />
             <Route path="/project" element={<SelectProject />} />
             <Route path="/create-project" element={<CreateProject />} />
+            <Route path="/table-test" element={<TableTest />} />
           </Routes>
         </Router>
       </DndContext>

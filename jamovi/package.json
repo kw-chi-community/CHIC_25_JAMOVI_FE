@@ -16,6 +16,8 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@mescius/spread-sheets": "^18.0.3",
+    "@mescius/spread-sheets-react": "^18.0.3",
     "framer-motion": "^11.18.1",
     "lucide": "^0.474.0",
     "lucide-react": "^0.474.0",
