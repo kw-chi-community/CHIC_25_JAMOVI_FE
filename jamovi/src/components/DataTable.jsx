@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import useWebSocket from "../hooks/useWebSocket";
 import { SpreadSheets, Worksheet } from "@mescius/spread-sheets-react";
 import "@mescius/spread-sheets/styles/gc.spread.sheets.excel2016colorful.css";
-import * as GC from "@mescius/spread-sheets"; // GC 모듈 import
+import * as GC from "@mescius/spread-sheets";
 
 const DataTable = () => {
   const [searchParams] = useSearchParams();
@@ -12,6 +12,7 @@ const DataTable = () => {
 
   const [data, setData, ws] = useWebSocket(projectId, token);
   const wsRef = useRef(null);
+  const spreadRef = useRef(null); // Spread instance 저장
 
   useEffect(() => {
     if (ws) {
@@ -19,43 +20,68 @@ const DataTable = () => {
     }
   }, [ws]);
 
-  // 시트 초기화 및 값 변경 이벤트 리스너 추가
+  // ✅ Spread 초기화 함수
   const initSpread = (spread) => {
+    spreadRef.current = spread;
     const sheet = spread.getActiveSheet();
+    if (data.length === 0) return; // 데이터가 없으면 실행하지 않음
 
-    // 기존 데이터를 시트에 적용
+    // ✅ WebSocket에서 받은 데이터를 시트에 반영
     data.forEach((row, rowIndex) => {
       row.forEach((cell, colIndex) => {
         sheet.setValue(rowIndex, colIndex, cell);
       });
     });
 
-    // 셀 값이 변경될 때 handleChange 호출
+    // ✅ 값 변경 이벤트 핸들러 추가
     sheet.bind(GC.Spread.Sheets.Events.ValueChanged, (event, args) => {
       const { row, col, newValue } = args;
+      console.log(row, col, newValue);
+
       handleChange(row, col, newValue);
     });
   };
 
-  // WebSocket을 통해 데이터 변경 사항 전송
+  // ✅ WebSocket을 통해 변경된 데이터 반영
+  useEffect(() => {
+    if (!spreadRef.current || data.length === 0) return;
+    const sheet = spreadRef.current.getActiveSheet();
+
+    // 프로그램 업데이트 시 이벤트 핸들러 임시 해제
+    sheet.unbind(GC.Spread.Sheets.Events.ValueChanged);
+
+    data.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        sheet.setValue(rowIndex, colIndex, cell);
+      });
+    });
+
+    // 사용자 입력에 의한 변경 감지를 위해 다시 이벤트 핸들러 바인딩
+    sheet.bind(GC.Spread.Sheets.Events.ValueChanged, (event, args) => {
+      const { row, col, newValue } = args;
+      console.log(row, col, newValue);
+      handleChange(row, col, newValue);
+    });
+  }, [data]);
+
+  // ✅ 값 변경 시 실행되는 함수
   const handleChange = (rowIndex, colIndex, newValue) => {
-    // 상태 데이터 업데이트
-    const newData = [...data];
-    newData[rowIndex][colIndex] = newValue;
-    setData(newData);
+    setData((prevData) => {
+      const newData = [...prevData];
+      newData[rowIndex][colIndex] = newValue;
+      return newData;
+    });
 
     const wsInstance = wsRef.current || ws;
-
-    if (!wsInstance) return;
-
-    if (wsInstance.readyState === WebSocket.OPEN) {
-      const message = JSON.stringify({
-        row: rowIndex,
-        col: colIndex,
-        value: newValue,
-      });
-
-      wsInstance.send(message);
+    if (wsInstance?.readyState === WebSocket.OPEN) {
+      console.log("send");
+      wsInstance.send(
+        JSON.stringify({
+          row: rowIndex,
+          col: colIndex,
+          value: newValue,
+        })
+      );
     }
   };
 

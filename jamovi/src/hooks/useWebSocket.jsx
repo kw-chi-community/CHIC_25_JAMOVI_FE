@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 
 const useWebSocket = (projectId, token) => {
-  const [data, setData] = useState(
-    Array.from({ length: 10 }, () => Array(20).fill(""))
-  );
+  const [data, setData] = useState([]); // 초기 데이터 비워둠
   const [ws, setWs] = useState(null);
 
   useEffect(() => {
     if (!projectId || !token) {
-      console.error("❌ 프로젝트 ID 또는 토큰이 없습니다.");
+      console.error("프로젝트 ID 또는 토큰이 없습니다.");
       return;
     }
 
@@ -19,15 +17,15 @@ const useWebSocket = (projectId, token) => {
     );
 
     websocket.onopen = () => {
-      console.log("✅ WebSocket 연결 성공!", websocket);
+      console.log("WebSocket 연결 성공!");
     };
 
     websocket.onmessage = (event) => {
       const response = JSON.parse(event.data);
       if (response.success) {
         if (response.type === "initial_data") {
-          // console.log(response.data);
-          setData(response.data);
+          console.log("초기 데이터 수신:", response.data);
+          setData(response.data); // 초기 데이터 업데이트
         } else if (response.type === "update") {
           setData((prevData) => {
             const newData = [...prevData];
@@ -36,28 +34,36 @@ const useWebSocket = (projectId, token) => {
           });
         }
       } else {
-        console.error("❌ WebSocket 에러:", response.message);
+        console.error("WebSocket 에러:", response.message);
       }
     };
 
     websocket.onerror = (error) => {
-      console.error("❌ WebSocket 오류 발생:", error);
+      console.error("WebSocket 오류 발생:", error);
     };
 
     websocket.onclose = (event) => {
-      console.warn("⚠️ WebSocket 연결 종료됨:", event.code);
+      console.warn("WebSocket 연결 종료됨:", event.code);
     };
 
     setWs(websocket);
-    console.log("🚀 useWebSocket 내부 WebSocket 생성됨:", websocket); // ✅ 디버깅 로그 추가
 
     return () => {
-      console.log("🛑 WebSocket 연결 해제");
       websocket.close();
     };
   }, [projectId, token]);
 
-  return [data, setData, ws];
+  // 데이터를 보낼 때 로그를 남기고 전송하는 함수 추가
+  const sendData = (dataToSend) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      console.log("데이터 전송:", dataToSend);
+      ws.send(JSON.stringify(dataToSend));
+    } else {
+      console.error("WebSocket이 연결되어 있지 않습니다.");
+    }
+  };
+
+  return [data, setData, ws, sendData];
 };
 
 export default useWebSocket;
