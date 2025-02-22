@@ -16,10 +16,12 @@ const useWebSocket = (projectId, token) => {
       }/projects/table?project_id=${projectId}&token=${token}`
     );
 
+    // 웹소켓 연결
     websocket.onopen = () => {
       console.log("WebSocket 연결 성공!");
     };
 
+    // 데이터 수신
     websocket.onmessage = (event) => {
       const response = JSON.parse(event.data);
       if (response.success) {
@@ -34,7 +36,7 @@ const useWebSocket = (projectId, token) => {
           });
         }
       } else {
-        console.error("WebSocket 에러:", response.message);
+        console.error("WebSocket 수신 에러:", response.message);
       }
     };
 
@@ -42,6 +44,7 @@ const useWebSocket = (projectId, token) => {
       console.error("WebSocket 오류 발생:", error);
     };
 
+    // 웹소켓 연결 종료
     websocket.onclose = (event) => {
       console.warn("WebSocket 연결 종료됨:", event.code);
     };
@@ -52,18 +55,7 @@ const useWebSocket = (projectId, token) => {
       websocket.close();
     };
   }, [projectId, token]);
-
-  // 데이터를 보낼 때 로그를 남기고 전송하는 함수 추가
-  const sendData = (dataToSend) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      console.log("데이터 전송:", dataToSend);
-      ws.send(JSON.stringify(dataToSend));
-    } else {
-      console.error("WebSocket이 연결되어 있지 않습니다.");
-    }
-  };
-
-  return [data, setData, ws, sendData];
+  return [data, setData, ws];
 };
 
 export default useWebSocket;
