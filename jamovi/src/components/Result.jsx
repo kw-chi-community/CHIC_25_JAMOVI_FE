@@ -54,6 +54,10 @@ const Result = () => {
     navigate("/login");
   };
 
+  const handleNavigateToProject = () => {
+    navigate("/create-project");
+  };
+
   const [items, setItems] = useState(["1", "2", "3"]);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -92,7 +96,9 @@ const Result = () => {
                   </div>
                   <div className="w-1/2 flex justify-end space-x-4">
                     <Button variant="solid">export</Button>
-                    <Button variant="solid">new project</Button>
+                    <Button variant="solid" onClick={handleNavigateToProject}>
+                      new project
+                    </Button>
                     <Button variant="solid" onClick={handleNavigateToLogin}>
                       logout
                     </Button>
