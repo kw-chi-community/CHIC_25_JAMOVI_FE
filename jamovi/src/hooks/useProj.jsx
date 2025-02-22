@@ -1,5 +1,5 @@
 // src/hooks/useProj.jsx
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 /**
  * useProj 커스텀 훅
@@ -15,7 +15,7 @@ const useProj = () => {
    * 프로젝트 목록을 백엔드에서 가져옵니다.
    * @returns {Promise<void>}
    */
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -51,7 +51,7 @@ const useProj = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   /**
    * 새로운 프로젝트를 생성합니다.
@@ -60,7 +60,7 @@ const useProj = () => {
    * @param {string} [projectData.description] - 프로젝트 설명
    * @returns {Promise<Object>} 생성된 프로젝트 데이터
    */
-  const createProject = async ({ name, description = "" }) => {
+  const createProject = useCallback(async ({ name, description = "" }) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -97,7 +97,57 @@ const useProj = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  /**
+   * 특정 프로젝트의 상세 정보를 가져오는
+   * @param {string|number} projectId - 프로젝트 ID
+   * @returns {Promise<Object>} 프로젝트 상세 정보 (노션 참고, 해당 테이블 전체 + 권한 정보)
+   */
+  const getProject = useCallback(async (projectId) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("!token");
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`!response.ok: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        id: data.id,
+        userId: data.user_id,
+        name: data.name,
+        visibility: data.visibility,
+        description: data.description,
+        permissions:
+          data.permissions?.map((perm) => ({
+            userId: perm.user_id,
+            isEditor: perm.is_editor,
+          })) || [],
+      };
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   return {
     projects,
@@ -105,6 +155,7 @@ const useProj = () => {
     error,
     fetchProjects,
     createProject,
+    getProject,
   };
 };
 

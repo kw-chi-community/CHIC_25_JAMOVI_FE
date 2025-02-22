@@ -1,25 +1,38 @@
 import React, { useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import useProj from "../hooks/useProj";
 import DataTable from "./DataTable";
 import OptionForm from "./OptionForm";
 import Result from "./Result";
 import LoadingSpinner from "./LoadingSpinner";
 
 const Home = () => {
-  const { isLoggedIn, isLoading } = useAuth();
+  const { isLoggedIn, isLoading: authLoading } = useAuth();
+  const { getProject, isLoading: projLoading } = useProj();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const projectId = searchParams.get("id");
 
   useEffect(() => {
-    console.log("projectId", projectId);
-    if (!projectId) {
-      navigate("/project");
-    }
-  }, [projectId, navigate]);
+    const fetchProjectDetails = async () => {
+      if (projectId) {
+        try {
+          const projectData = await getProject(projectId);
+          console.log("project name:", projectData.name);
+          document.title = `Stat Bee | ${projectData.name}`;
+        } catch (error) {
+          console.error("err fetching project", error);
+        }
+      } else {
+        navigate("/project");
+      }
+    };
 
-  if (isLoading || !isLoggedIn) {
+    fetchProjectDetails();
+  }, [projectId, navigate, getProject]);
+
+  if (authLoading || projLoading || !isLoggedIn) {
     return <LoadingSpinner />;
   }
 

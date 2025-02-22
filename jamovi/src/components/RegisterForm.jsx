@@ -8,12 +8,19 @@ const RegisterForm = () => {
     email: "",
     password: "",
     passwordConfirm: "", // 비밀번호 확인 필드 추가
+    verificationCode: ["", "", "", "", "", ""],
   });
   const [error, setError] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState(""); // 사용자 이메일 상태 추가
   const [isLoading, setIsLoading] = useState(false); // 로딩 상태 추가
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState("");
   const navigate = useNavigate(); // useNavigate 훅 사용
+
+  const verificationInputRefs = Array(6)
+    .fill()
+    .map(() => React.createRef());
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -57,19 +64,20 @@ const RegisterForm = () => {
     }
 
     try {
-      const params = new URLSearchParams({
-        username: formData.email,
+      const requestData = {
+        email: formData.email,
         password: formData.password,
-      });
+        verification_code: formData.verificationCode.join(""),
+      };
 
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/auth/register`,
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/json",
           },
-          body: params,
+          body: JSON.stringify(requestData),
         }
       );
 
@@ -90,6 +98,102 @@ const RegisterForm = () => {
     }
   };
 
+  const handleSendVerification = async () => {
+    if (!formData.email) {
+      setError("이메일을 입력해주세요.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("유효한 이메일 주소를 입력해주세요.");
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationStatus("전송중...");
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/auth/send-verification`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: formData.email }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setVerificationStatus("전송됨");
+        setError("");
+      } else {
+        setVerificationStatus("");
+        setError("인증 메일 전송에 실패했습니다. 다시 시도해주세요.");
+      }
+    } catch (err) {
+      setVerificationStatus("");
+      setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+      console.error("verification email send error:", err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleVerificationCodeChange = (index, value) => {
+    const newValue = value.replace(/[^0-9]/g, "");
+
+    if (newValue.length <= 1) {
+      const newVerificationCode = [...formData.verificationCode];
+      newVerificationCode[index] = newValue;
+
+      setFormData((prev) => ({
+        ...prev,
+        verificationCode: newVerificationCode,
+      }));
+
+      if (newValue.length === 1 && index < 5) {
+        verificationInputRefs[index + 1].current.focus();
+      }
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (
+      e.key === "Backspace" &&
+      index > 0 &&
+      formData.verificationCode[index] === ""
+    ) {
+      verificationInputRefs[index - 1].current.focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData
+      .getData("text")
+      .replace(/[^0-9]/g, "")
+      .slice(0, 6);
+
+    if (pastedText.length > 0) {
+      const newVerificationCode = Array(6).fill("");
+      [...pastedText].forEach((char, index) => {
+        if (index < 6) newVerificationCode[index] = char;
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        verificationCode: newVerificationCode,
+      }));
+
+      const nextIndex = Math.min(pastedText.length, 5);
+      verificationInputRefs[nextIndex].current.focus();
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
@@ -107,14 +211,47 @@ const RegisterForm = () => {
             >
               이메일
             </label>
-            <Input
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="example@email.com"
-            />
+            <div className="flex gap-2">
+              <Input
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="example@email.com"
+              />
+              <Button
+                type="button"
+                onClick={handleSendVerification}
+                disabled={isVerifying}
+              >
+                {verificationStatus || "인증메일 전송"}
+              </Button>
+            </div>
           </div>
-
+          <div className="mt-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700"
+            >
+              인증메일
+            </label>
+            <div className="flex gap-2 justify-between">
+              {[0, 1, 2, 3, 4, 5].map((index) => (
+                <Input
+                  key={index}
+                  ref={verificationInputRefs[index]}
+                  type="text"
+                  maxLength={1}
+                  className="w-12 h-12 text-center text-xl"
+                  value={formData.verificationCode[index]}
+                  onChange={(e) =>
+                    handleVerificationCodeChange(index, e.target.value)
+                  }
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  onPaste={index === 0 ? handlePaste : undefined}
+                />
+              ))}
+            </div>
+          </div>
           <div>
             <label
               htmlFor="password"

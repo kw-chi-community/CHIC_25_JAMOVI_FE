@@ -38,8 +38,8 @@ jobs:
     steps:
       - name: Install SSH and sshpass
         run: |
-          sudo apt-get update
-          sudo apt-get install -y openssh-client sshpass
+          sudo apt update
+          sudo apt install -y openssh-client sshpass
 
       - name: Log in to Docker Hub on the server
         run: |
@@ -64,7 +64,7 @@ jobs:
             sudo docker pull $IMAGE
             sudo docker stop chic_25_jamovi_fe || true
             sudo docker rm chic_25_jamovi_fe || true
-            sudo docker run -d --name chic_25_jamovi_fe --network host -p 1542:1542 $IMAGE || echo "Failed to start container"
+            sudo docker run -d --name chic_25_jamovi_fe --network host -p 13358:13358 $IMAGE || echo "Failed to start container"
             sudo docker logs chic_25_jamovi_fe
             sudo docker system prune -af
           EOF
