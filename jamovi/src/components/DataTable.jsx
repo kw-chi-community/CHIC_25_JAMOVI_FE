@@ -1,75 +1,76 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import useWebSocket from "../hooks/useWebSocket";
-
-const Table = ({ data, onChange }) => {
-  return (
-    <div className="min-h-1/2 pb-2 pr-2 p-4">
-      <table className="border-collapse w-full border border-gray-300">
-        <thead>
-          <tr>
-            <th className="border border-gray-300 p-1 bg-gray-100"></th>
-            {Array.from({ length: 20 }, (_, index) => (
-              <th
-                key={index}
-                className="border border-gray-300 py-1 bg-gray-100 w-1/20"
-              >
-                {index + 1}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white">
-          {data.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              <td className="border border-gray-300 p-1 text-center">
-                {rowIndex + 1}
-              </td>
-              {row.map((cell, colIndex) => (
-                <td key={colIndex} className="border border-gray-300 w-[5%]">
-                  <input
-                    type="text"
-                    value={cell}
-                    onChange={(e) =>
-                      onChange(rowIndex, colIndex, e.target.value)
-                    }
-                    className="border-none outline-none w-full"
-                    placeholder={`Row ${rowIndex + 1}, Col ${colIndex + 1}`}
-                  />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+import { SpreadSheets, Worksheet } from "@mescius/spread-sheets-react";
+import "@mescius/spread-sheets/styles/gc.spread.sheets.excel2016colorful.css";
+import * as GC from "@mescius/spread-sheets"; // GC 모듈 import
 
 const DataTable = () => {
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("id");
   const token = localStorage.getItem("token");
 
-  const [data, ws] = useWebSocket(projectId, token);
+  const [data, setData, ws] = useWebSocket(projectId, token);
+  const wsRef = useRef(null);
 
-  const handleChange = (rowIndex, colIndex, value) => {
+  useEffect(() => {
+    if (ws) {
+      wsRef.current = ws;
+    }
+  }, [ws]);
+
+  // 시트 초기화 및 값 변경 이벤트 리스너 추가
+  const initSpread = (spread) => {
+    const sheet = spread.getActiveSheet();
+
+    // 기존 데이터를 시트에 적용
+    data.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        sheet.setValue(rowIndex, colIndex, cell);
+      });
+    });
+
+    // 셀 값이 변경될 때 handleChange 호출
+    sheet.bind(GC.Spread.Sheets.Events.ValueChanged, (event, args) => {
+      const { row, col, newValue } = args;
+      handleChange(row, col, newValue);
+    });
+  };
+
+  // WebSocket을 통해 데이터 변경 사항 전송
+  const handleChange = (rowIndex, colIndex, newValue) => {
+    // 상태 데이터 업데이트
     const newData = [...data];
-    newData[rowIndex][colIndex] = value;
+    newData[rowIndex][colIndex] = newValue;
     setData(newData);
 
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(
-        JSON.stringify({
-          row: rowIndex,
-          col: colIndex,
-          value: value,
-        })
-      );
+    const wsInstance = wsRef.current || ws;
+
+    if (!wsInstance) return;
+
+    if (wsInstance.readyState === WebSocket.OPEN) {
+      const message = JSON.stringify({
+        row: rowIndex,
+        col: colIndex,
+        value: newValue,
+      });
+
+      wsInstance.send(message);
     }
   };
 
-  return <Table data={data} onChange={handleChange} />;
+  const hostStyle = {
+    width: "100%",
+    height: "400px",
+  };
+
+  return (
+    <div>
+      <SpreadSheets workbookInitialized={initSpread} hostStyle={hostStyle}>
+        <Worksheet />
+      </SpreadSheets>
+    </div>
+  );
 };
 
 export default DataTable;

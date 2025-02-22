@@ -21,7 +21,6 @@ function TableTest() {
 
   return (
     <div>
-      <h2>리액트로 구현한 엑셀 같은 테이블</h2>
       <SpreadSheets workbookInitialized={initSpread} hostStyle={hostStyle}>
         <Worksheet />
       </SpreadSheets>
