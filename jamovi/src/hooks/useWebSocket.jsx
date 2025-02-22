@@ -26,7 +26,6 @@ const useWebSocket = (projectId, token) => {
       const response = JSON.parse(event.data);
       if (response.success) {
         if (response.type === "initial_data") {
-          console.log("초기 데이터 수신:", response.data);
           setData(response.data); // 초기 데이터 업데이트
         } else if (response.type === "update") {
           setData((prevData) => {
