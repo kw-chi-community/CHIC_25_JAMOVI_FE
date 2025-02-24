@@ -132,7 +132,11 @@ const RegisterForm = () => {
         setError("");
       } else {
         setVerificationStatus("");
-        setError("인증 메일 전송에 실패했습니다. 다시 시도해주세요.");
+        if (data.detail === "Email already registered") {
+          setError("이미 등록된 이메일입니다.");
+        } else {
+          setError("인증 메일 전송에 실패했습니다. 다시 시도해주세요.");
+        }
       }
     } catch (err) {
       setVerificationStatus("");
