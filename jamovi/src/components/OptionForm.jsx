@@ -12,6 +12,7 @@ import {
 } from "@chakra-ui/react";
 import { useTableData } from "../contexts/TableDataContext";
 import { useSearchParams } from "react-router-dom";
+import { useResult } from "../contexts/ResultContext";
 
 const testTypes = [
   { id: "OneWayANOVA", label: "📊 One-Way ANOVA" },
@@ -64,6 +65,7 @@ const OptionForm = () => {
   ]);
 
   const toast = useToast();
+  const { setAnalysisResult } = useResult();
 
   useEffect(() => {
     if (testMethodMappings[test]) {
@@ -307,6 +309,8 @@ const OptionForm = () => {
       })
       .then((data) => {
         console.log("Statistics result:", data);
+        setAnalysisResult(data);
+
         toast({
           title: "분석 완료",
           description: "통계 분석이 성공적으로 완료되었습니다.",

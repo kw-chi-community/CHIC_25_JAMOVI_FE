@@ -1,54 +1,102 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Card, CardBody, CardHeader, Button, Collapse } from "@chakra-ui/react";
-import { DndContext, closestCenter } from "@dnd-kit/core";
-import { SortableContext, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Button,
+  Collapse,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Box,
+  Heading,
+  Text,
+} from "@chakra-ui/react";
+import { DndContext } from "@dnd-kit/core";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   restrictToVerticalAxis,
   restrictToWindowEdges,
 } from "@dnd-kit/modifiers";
+import { useResult } from "../contexts/ResultContext";
 
-const SortableItemComponent = ({ id }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id, handle: ".handle" });
-
-  const style = {
-    transform: transform ? CSS.Transform.toString(transform) : undefined,
-    transition,
-  };
+const StatsTable = ({ title, data }) => {
+  if (!data) return null;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex justify-between p-2 mb-2 items-start hover:bg-[#EDF2F7] rounded transition-colors duration-100"
-    >
-      <span
-        className="handle cursor-grab text-gray-300"
-        {...attributes}
-        {...listeners}
-      >
-        ☰
-      </span>
-      <div className="flex-grow">
-        <div className="px-2">
-          <h1>대응표본 T 검증</h1>
-          <p>
-            본 연구 결과 p값은 0.189로 유의미한지는 모르겠지만 어쨌든 결과가
-            나왔습니다. 이 자리에는 이런 식으로 llm이 생성해준 값을 대충
-            집어넣을 예정입니다. 로렘잇섬어쩌고저쩌고
-          </p>
-        </div>
-      </div>
-    </div>
+    <Box mb={6}>
+      <Heading size="md" mb={2}>
+        {title}
+      </Heading>
+      <Table variant="simple" size="sm">
+        <Thead>
+          <Tr>
+            <Th>통계량</Th>
+            <Th>값</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {Object.entries(data).map(([key, value]) => (
+            <Tr key={key}>
+              <Td fontWeight="medium">{formatStatKey(key)}</Td>
+              <Td isNumeric>
+                {typeof value === "number" ? formatNumber(value) : value}
+              </Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
+    </Box>
   );
+};
+
+const formatStatKey = (key) => {
+  const keyMap = {
+    group_name: "그룹명",
+    stats_min: "최소값",
+    stats_max: "최대값",
+    stats_median: "중앙값",
+    stats_mean: "평균",
+    stats_sd: "표준편차",
+    stats_se: "표준오차",
+    stats_n: "표본 수",
+    stats_q1: "1사분위수",
+    stats_q3: "3사분위수",
+    stats_var: "분산",
+    n: "표본 수",
+    mean: "평균",
+    sd: "표준편차",
+    se: "표준오차",
+    min: "최소값",
+    max: "최대값",
+    median: "중앙값",
+    t_statistic: "t 통계량",
+    df: "자유도",
+    p_value: "p-값",
+    confidence_interval_lower: "신뢰구간 하한",
+    confidence_interval_upper: "신뢰구간 상한",
+    conf_level: "신뢰수준",
+    mu: "모평균",
+  };
+
+  return keyMap[key] || key;
+};
+
+const formatNumber = (num) => {
+  if (Math.abs(num) < 0.0001) {
+    return num.toExponential(6);
+  }
+  return Number.isInteger(num) ? num : num.toFixed(4);
 };
 
 const Result = () => {
   const navigate = useNavigate();
+  const { analysisResult } = useResult();
 
   const handleNavigateToLogin = () => {
     navigate("/login");
@@ -74,6 +122,63 @@ const Result = () => {
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
+  };
+
+  const renderResults = () => {
+    if (!analysisResult || !analysisResult.success) {
+      return (
+        <Box p={4} textAlign="center">
+          <Text color="gray.500">
+            분석을 실행하면 결과가 여기에 표시됩니다.
+          </Text>
+        </Box>
+      );
+    }
+
+    const result = analysisResult.result;
+
+    if (result.group_stats && result.test_stats) {
+      return (
+        <Box p={4}>
+          <Heading size="lg" mb={4}>
+            분석 결과
+          </Heading>
+          <StatsTable title="그룹 통계량" data={result.group_stats} />
+          <StatsTable title="검정 통계량" data={result.test_stats} />
+        </Box>
+      );
+    }
+
+    if (result.group1_stats && result.group2_stats) {
+      return (
+        <Box p={4}>
+          <Heading size="lg" mb={4}>
+            분석 결과
+          </Heading>
+          <StatsTable
+            title={`그룹 통계량: ${result.group1_stats.group_name}`}
+            data={result.group1_stats}
+          />
+          <StatsTable
+            title={`그룹 통계량: ${result.group2_stats.group_name}`}
+            data={result.group2_stats}
+          />
+          {result.diff_stats && (
+            <StatsTable title="차이 통계량" data={result.diff_stats} />
+          )}
+          <StatsTable title="검정 통계량" data={result.test_stats} />
+        </Box>
+      );
+    }
+
+    return (
+      <Box p={4}>
+        <Heading size="lg" mb={4}>
+          분석 결과
+        </Heading>
+        <pre>{JSON.stringify(result, null, 2)}</pre>
+      </Box>
+    );
   };
 
   return (
@@ -120,11 +225,7 @@ const Result = () => {
             <div className="flex w-full h-full">
               <div className="w-3/4 pt-0 pl-0 p-5">
                 {!isCollapsed && <div className="pt-5" />}
-                <SortableContext items={items}>
-                  {items.map((id) => (
-                    <SortableItemComponent key={id} id={id} />
-                  ))}
-                </SortableContext>
+                {renderResults()}
               </div>
 
               <div className="w-1/4 h-full pl-5 border-l border-gray-200">
