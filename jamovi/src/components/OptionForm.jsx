@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardBody,
@@ -6,45 +6,57 @@ import {
   Input,
   Radio,
   RadioGroup,
+  Select,
   Button,
 } from "@chakra-ui/react";
 
-import useStats from "../hooks/useStats"; // useStats 훅 임포트
+const testTypes = [
+  { id: "OneWayANOVA", label: "📊 One-Way ANOVA" },
+  { id: "PairedTTest", label: "🔗 Paired T-Test" },
+  { id: "IndependentTTest", label: "🔄 Independent T-Test" },
+  { id: "OneSampleTTest", label: "🧪 One-Sample T-Test" },
+];
+
+const columns = Array.from({ length: 20 }, (_, i) => String.fromCharCode(97 + i)); // "a" to "t"
 
 const OptionForm = () => {
-  // 폼 상태 관리
   const [test, setTest] = useState("OneWayANOVA");
-  const [hypothesis, setHypothesis] = useState("RightTailed");
-  const [missingValueHandling, setMissingValueHandling] = useState("pairwise");
+  const [hypothesis, setHypothesis] = useState("TwoTailedDiff");
   const [meanDifference, setMeanDifference] = useState(false);
   const [confidenceInterval, setConfidenceInterval] = useState("95");
   const [effectSize, setEffectSize] = useState("Eta_Squared");
   const [effectSizeValue, setEffectSizeValue] = useState("0.06");
   const [descriptiveStats, setDescriptiveStats] = useState(true);
 
-  // 변수 meta data
-  const [value, setValue] = useState({
-    school: [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    home: [5, 4, 7, 8, 6, 5, 4, 5, 4],
-  });
+  // Data input fields
+  const [dataInputs, setDataInputs] = useState([{ id: 1, column: "a", startRow: "", endRow: "", groupName: "" }]);
 
-  // 폼 상태 객체 생성
-  const formState = {
-    test,
-    hypothesis,
-    missingValueHandling,
-    meanDifference,
-    confidenceInterval,
-    effectSize,
-    effectSizeValue,
-    descriptiveStats,
-    value,
+  const getMaxInputs = () => {
+    switch (test) {
+      case "PairedTTest":
+      case "IndependentTTest":
+        return 2;
+      case "OneSampleTTest":
+        return 1;
+      default:
+        return Infinity;
+    }
   };
 
-  // useStats 훅 호출
-  useStats(formState, 500); // 500ms 디바운스 적용
+  const addDataInput = () => {
+    if (dataInputs.length < getMaxInputs()) {
+      setDataInputs([...dataInputs, { id: Date.now(), column: "a", startRow: "", endRow: "", groupName: "" }]);
+    }
+  };
 
-  // 상태 변경 핸들러
+  const removeDataInput = (id) => {
+    setDataInputs(dataInputs.filter((input) => input.id !== id));
+  };
+
+  const handleDataInputChange = (id, field, value) => {
+    setDataInputs(dataInputs.map((input) => (input.id === id ? { ...input, [field]: value } : input)));
+  };
+
   const handleInputChange = useCallback(
     (setter) => (e) => {
       setter(e.target.value);
@@ -59,223 +71,141 @@ const OptionForm = () => {
     []
   );
 
-  const handleRadioChange = useCallback(
-    (setter) => (value) => {
-      setter(value);
-    },
-    []
-  );
-
   return (
     <div className="pt-2 pr-2 p-4 w-full">
       <Card>
-        <CardBody className="flex flex-col lg:flex-row">
-          {/* 왼쪽 컬럼 */}
-          <div className="flex flex-col w-full lg:w-1/2 pr-4">
-            {/* 검증 섹션 */}
-            {/* <div className="mb-6">
-              <h1 className="font-bold text-lg mb-2">검증</h1>
-              <div className="flex items-center ml-5 mb-2">
-                <Checkbox
-                  isChecked={studentChecked}
-                  onChange={() => toggleCheckbox(setStudentChecked)}
-                  className="mr-2"
+        <CardBody className="flex flex-col">
+          {/* 검정 방법 (Test Type Selection) */}
+          <div className="mb-6">
+            <h1 className="font-bold text-lg mb-2">검정 방법</h1>
+            <div className="flex flex-wrap gap-4">
+              {testTypes.map((item) => (
+                <div
+                  key={item.id}
+                  className={`cursor-pointer border rounded-lg p-2 ${
+                    test === item.id ? "border-blue-500 shadow-md" : "border-gray-300"
+                  }`}
+                  onClick={() => {
+                    setTest(item.id);
+                    setDataInputs([{ id: 1, column: "a", startRow: "", endRow: "", groupName: "" }]);
+                  }}
                 >
-                  Student's
-                </Checkbox>
-              </div>
-              <div className="ml-10 mb-2">
-                <Checkbox
-                  isChecked={bayesChecked}
-                  onChange={() => toggleCheckbox(setBayesChecked)}
-                  className="mr-2"
-                >
-                  베이즈 계수
-                </Checkbox>
-                <div className="flex items-center">
-                  <span
-                    className={`ml-[1.5rem] mr-2 ${
-                      !bayesChecked ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    사전
-                  </span>
-                  <Input
-                    size="xs"
-                    htmlSize={4}
-                    width="auto"
-                    value={priorValue}
-                    onChange={handleInputChange(setPriorValue)}
-                    isDisabled={!bayesChecked}
-                  />
+                  <p className="text-center mt-1">{item.label}</p>
                 </div>
-              </div>
-              <div className="flex items-center ml-5 mb-2">
-                <Checkbox
-                  isChecked={wilcoxonChecked}
-                  onChange={() => toggleCheckbox(setWilcoxonChecked)}
-                  className="mr-2"
-                >
-                  Wilcoxon rank
-                </Checkbox>
-              </div>
-            </div> */}
-
-            {/* 가설 섹션 */}
-            <div className="mb-6">
-              <h1 className="font-bold text-lg mb-2">가설</h1>
-              <RadioGroup
-                onChange={handleRadioChange(setHypothesis)}
-                value={hypothesis}
-              >
-                <div className="flex flex-col ml-5 space-y-1">
-                  <Radio value="RightTailed">측정 1 &lt; 측정 2</Radio>
-                  <Radio value="TwoTailedSame">측정 1 = 측정 2</Radio>
-                  <Radio value="TwoTailedDiff">측정 1 ≠ 측정 2</Radio>
-                  <Radio value="RightTailed">측정 1 &gt; 측정 2</Radio>
-
-                  {/* <Radio value="RightTailed">측정 1 ≠ 측정 2</Radio>
-                  <Radio value="TwoTailedSame">측정 1 &gt; 측정 2</Radio>
-                  <Radio value="LeftTailed">측정 1 &lt; 측정 2</Radio> */}
-                </div>
-              </RadioGroup>
-            </div>
-
-            {/* 결측 값 섹션 */}
-            <div className="mb-6">
-              <h1 className="font-bold text-lg mb-2">결측 값</h1>
-              <RadioGroup
-                onChange={handleRadioChange(setMissingValueHandling)}
-                value={missingValueHandling}
-              >
-                <div className="flex flex-col ml-5 space-y-1">
-                  <Radio value="pairwise">대응별 결측값 제거(pairwise)</Radio>
-                  <Radio value="ListwiseDeletion">
-                    목록별 결측값 제거(listwise)
-                  </Radio>
-                </div>
-              </RadioGroup>
+              ))}
             </div>
           </div>
 
-          {/* 오른쪽 컬럼 */}
-          <div className="flex flex-col w-full lg:w-1/2 pl-4">
-            {/* 추가 통계 섹션 */}
-            <div className="mb-6">
-              <h1 className="font-bold text-lg mb-2">추가 통계</h1>
-              <div className="flex items-center ml-5 mb-2">
-                <Checkbox
-                  isChecked={meanDifference}
-                  onChange={() => toggleCheckbox(setMeanDifference)}
-                  className="mr-2"
+          {/* Data Input Fields */}
+          <div className="mb-6 p-4 border rounded bg-gray-100">
+            <h1 className="font-bold text-lg mb-3">데이터 입력 설정</h1>
+            {dataInputs.map((input) => (
+              <div key={input.id} className="grid grid-cols-2 gap-4 mb-3 border p-3 rounded">
+                <div>
+                  <label className="font-medium">열 선택</label>
+                  <Select value={input.column} onChange={(e) => handleDataInputChange(input.id, "column", e.target.value)}>
+                    {columns.map((col) => (
+                      <option key={col} value={col}>
+                        {col}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <label className="font-medium">그룹 이름 셀</label>
+                  <Input value={input.groupName} onChange={(e) => handleDataInputChange(input.id, "groupName", e.target.value)} placeholder="입력하세요" />
+                </div>
+                <div>
+                  <label className="font-medium">시작 행</label>
+                  <Input type="number" value={input.startRow} onChange={(e) => handleDataInputChange(input.id, "startRow", e.target.value)} placeholder="숫자를 입력하세요" />
+                </div>
+                <div>
+                  <label className="font-medium">끝 행</label>
+                  <Input type="number" value={input.endRow} onChange={(e) => handleDataInputChange(input.id, "endRow", e.target.value)} placeholder="숫자를 입력하세요" />
+                </div>
+                {dataInputs.length > 1 && (
+                  <Button
+                  variant="outline"
+                  border="2px"
+                  borderColor="red.500"
+                  color="red.500"
+                  borderRadius="md"
+                  _hover={{ bg: "red.50", borderColor: "red.600", color: "red.600" }}
+                  onClick={() => removeDataInput(input.id)}
                 >
-                  평균 차이
-                </Checkbox>
-                {/* <NativeSelectRoot>
-                  <NativeSelectField>
-                    <option value="1">Eta_Squared</option>
-                    <option value="2">Cohens_D</option>
-                    <option value="2">Standardized_Mean_Difference</option>
-                  </NativeSelectField>
-                </NativeSelectRoot> */}
+                  - 삭제
+                </Button>
+                )}
               </div>
-              <div
-                className={`flex items-center ml-10 mb-2 ${
-                  !meanDifference ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              >
+            ))}
+            {dataInputs.length < getMaxInputs() && (
+              <Button colorScheme="blue" onClick={addDataInput}>
+                + 데이터 추가
+              </Button>
+            )}
+          </div>
+
+          {/* Side-by-Side Layout */}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* 가설 (Hypothesis) */}
+            <div className="w-full lg:w-1/2 p-5 border rounded-lg bg-gray-50 shadow-sm">
+              <h1 className="font-bold text-lg text-gray-700 mb-4">가설</h1>
+              <RadioGroup onChange={handleInputChange(setHypothesis)} value={hypothesis}>
+                <div className="flex flex-col space-y-3 text-gray-700">
+                  <Radio value="RightTailed">측정 1 &gt; 측정 2</Radio>
+                  <Radio value="TwoTailedSame">측정 1 = 측정 2</Radio>
+                  <Radio value="TwoTailedDiff">측정 1 ≠ 측정 2</Radio>
+                  <Radio value="LeftTailed">측정 1 &lt; 측정 2</Radio>
+                </div>
+              </RadioGroup>
+            </div>
+            {/* 추가 통계 */}
+            <div className="w-full lg:w-1/2 p-5 border rounded-lg bg-gray-50 shadow-sm">
+              <h1 className="font-bold text-lg text-gray-700 mb-4">추가 통계</h1>
+
+              {/* Effect Size Type Selection */}
+              <div className="mb-5">
+                <label className="font-medium text-gray-700">Effect Size Type</label>
+                <Select 
+                  value={effectSize} 
+                  onChange={handleInputChange(setEffectSize)} 
+                  className="mt-2 border-gray-300 rounded-md"
+                >
+                  <option value="Cohens_d">Cohen’s d</option>
+                  <option value="Hedges_g">Hedges’ g</option>
+                  <option value="Eta_Squared">Eta squared</option>
+                  <option value="Partial_Eta_Squared">Partial eta squared</option>
+                  <option value="Glasss_Delta">Glass’s delta</option>
+                </Select>
+              </div>
+
+              {/* 신뢰구간 (Confidence Interval) */}
+              <div className="mb-5 flex items-center gap-2">
                 <Checkbox
                   isChecked={confidenceInterval !== ""}
-                  onChange={() =>
-                    setConfidenceInterval(confidenceInterval === "" ? "95" : "")
-                  }
-                  className="mr-2"
+                  onChange={() => setConfidenceInterval(confidenceInterval ? "" : "95")} // Default to 95 when checked
                 >
                   신뢰구간
                 </Checkbox>
                 <Input
+                  type="number"
                   size="xs"
-                  htmlSize={4}
-                  width="auto"
+                  width="2.5rem"
+                  textAlign="center"
                   value={confidenceInterval}
-                  onChange={handleInputChange(setConfidenceInterval)}
-                  isDisabled={!meanDifference}
+                  onChange={(e) => setConfidenceInterval(e.target.value ? parseFloat(e.target.value) : "")} // Converts input to number
+                  className="border-gray-300 rounded-md px-2"
                 />
-                <span
-                  className={`text-gray-400 ml-1 ${
-                    meanDifference ? "" : "opacity-50 cursor-not-allowed"
-                  }`}
-                >
-                  %
-                </span>
+                <span className="text-gray-600">%</span>
               </div>
-
-              <div className="flex items-center ml-5 mb-2">
-                <Checkbox
-                  isChecked={effectSize}
-                  onChange={() => toggleCheckbox(setEffectSize)}
-                  className="mr-2"
-                >
-                  효과 크기
-                </Checkbox>
-                {effectSizeValue && (
-                  <div className="flex items-center">
-                    <Input
-                      size="xs"
-                      htmlSize={4}
-                      width="auto"
-                      value={effectSizeValue}
-                      onChange={handleInputChange(setEffectSizeValue)}
-                      isDisabled={!effectSizeValue}
-                    />
-                    <span className="text-gray-400 ml-1">%</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center ml-5 mb-2">
-                <Checkbox
-                  isChecked={descriptiveStats}
-                  onChange={() => toggleCheckbox(descriptiveStats)}
-                  className="mr-2"
-                >
+              {/* 기술 통계 (Descriptive Stats) */}
+              <div className="mb-5">
+                <Checkbox isChecked={descriptiveStats} onChange={toggleCheckbox(setDescriptiveStats)}>
                   기술 통계
-                </Checkbox>
-              </div>
-
-              <div className="flex items-center ml-5 mb-2">
-                <Checkbox
-                  isChecked={descriptiveStats}
-                  onChange={() => toggleCheckbox(setDescriptiveStats)}
-                  className="mr-2"
-                >
-                  기술 통계 도표
                 </Checkbox>
               </div>
             </div>
 
-            {/* 가정검증 섹션 */}
-            {/* <div className="mb-6">
-              <h1 className="font-bold text-lg mb-2">가정검증</h1>
-              <div className="flex items-center ml-5 mb-2">
-                <Checkbox
-                  isChecked={normalityChecked}
-                  onChange={() => toggleCheckbox(setNormalityChecked)}
-                  className="mr-2"
-                >
-                  정규분포성 검증
-                </Checkbox>
-              </div>
-              <div className="flex items-center ml-5 mb-2">
-                <Checkbox
-                  isChecked={qqPlotChecked}
-                  onChange={() => toggleCheckbox(setQqPlotChecked)}
-                  className="mr-2"
-                >
-                  Q-Q 도표
-                </Checkbox>
-              </div>
-            </div> */}
           </div>
         </CardBody>
       </Card>
