@@ -21,9 +21,15 @@ import {
   Input,
   Textarea,
   useDisclosure,
+  List,
+  ListItem,
+  Divider,
+  Badge,
+  Flex,
+  Spinner,
 } from "@chakra-ui/react";
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { DndContext } from "@dnd-kit/core";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
@@ -104,7 +110,7 @@ const formatNumber = (num) => {
 
 const Result = () => {
   const navigate = useNavigate();
-  const { analysisResult } = useResult();
+  const { analysisResult, setAnalysisResult } = useResult();
 
   const handleNavigateToLogin = () => {
     navigate("/login");
@@ -120,11 +126,99 @@ const Result = () => {
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false); // ✅ 추가: Collapse 상태
-  const [items, setItems] = useState(["1", "2", "3"]); // ✅ 추가: items 상태
+  const [searchParams] = useSearchParams();
+  const token = localStorage.getItem("token");
+  const [testList, setTestList] = useState([]);
+  const [isLoadingTests, setIsLoadingTests] = useState(false);
+  const [selectedTestId, setSelectedTestId] = useState(null);
+  const [testResult, setTestResult] = useState(null);
+  const [isLoadingResult, setIsLoadingResult] = useState(false);
 
   useEffect(() => {
     console.log("현재 프로젝트 ID:", projectId);
   }, [projectId]);
+
+  // 프로젝트의 통계 테스트 목록 가져오기
+  useEffect(() => {
+    if (!projectId) return;
+
+    const fetchTestList = async () => {
+      setIsLoadingTests(true);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/statistics/${projectId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          setTestList(data.tests);
+          // 테스트가 있으면 첫 번째 테스트를 선택
+          if (data.tests.length > 0) {
+            setSelectedTestId(data.tests[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching test list:", error);
+      } finally {
+        setIsLoadingTests(false);
+      }
+    };
+
+    fetchTestList();
+  }, [projectId, token]);
+
+  // 특정 테스트 결과 가져오기
+  const fetchTestResult = async (testId) => {
+    if (!testId || !projectId) return;
+
+    setIsLoadingResult(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/statistics/${projectId}/${testId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log("Test result:", data);
+        setTestResult(data);
+      }
+    } catch (error) {
+      console.error(`Error fetching test result for ID ${testId}:`, error);
+      toast({
+        title: "결과 로딩 오류",
+        description: `테스트 결과를 가져오는 중 오류가 발생했습니다: ${error.message}`,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoadingResult(false);
+    }
+  };
+
+  // 테스트 선택 핸들러
+  const handleSelectTest = (testId) => {
+    setSelectedTestId(testId);
+    fetchTestResult(testId);
+  };
 
   const handleEditProject = async () => {
     if (!projectId) return;
@@ -181,58 +275,84 @@ const Result = () => {
   };
 
   const renderResults = () => {
-    if (!analysisResult || !analysisResult.success) {
+    if (isLoadingResult) {
+      return (
+        <Box p={4} textAlign="center">
+          <Spinner size="xl" />
+          <Text mt={4}>결과를 불러오는 중입니다...</Text>
+        </Box>
+      );
+    }
+
+    if (!testResult) {
       return (
         <Box p={4} textAlign="center">
           <Text color="gray.500">
-            분석을 실행하면 결과가 여기에 표시됩니다.
+            왼쪽 목록에서 통계 분석 결과를 선택하거나 새로운 분석을 실행하세요.
           </Text>
         </Box>
       );
     }
 
-    const result = analysisResult.result;
-
-    if (result.group_stats && result.test_stats) {
-      return (
-        <Box p={4}>
-          <Heading size="lg" mb={4}>
-            분석 결과
-          </Heading>
-          <StatsTable title="그룹 통계량" data={result.group_stats} />
-          <StatsTable title="검정 통계량" data={result.test_stats} />
-        </Box>
-      );
-    }
-
-    if (result.group1_stats && result.group2_stats) {
-      return (
-        <Box p={4}>
-          <Heading size="lg" mb={4}>
-            분석 결과
-          </Heading>
-          <StatsTable
-            title={`그룹 통계량: ${result.group1_stats.group_name}`}
-            data={result.group1_stats}
-          />
-          <StatsTable
-            title={`그룹 통계량: ${result.group2_stats.group_name}`}
-            data={result.group2_stats}
-          />
-          {result.diff_stats && (
-            <StatsTable title="차이 통계량" data={result.diff_stats} />
-          )}
-          <StatsTable title="검정 통계량" data={result.test_stats} />
-        </Box>
-      );
-    }
+    const result = testResult.statistical_test_result;
 
     return (
       <Box p={4}>
-        <Heading size="lg" mb={4}>
-          분석 결과
-        </Heading>
-        <pre>{JSON.stringify(result, null, 2)}</pre>
+        <Flex justify="space-between" align="center" mb={4}>
+          <Heading size="lg">{testResult.alias}</Heading>
+          <Badge colorScheme="blue" fontSize="md" p={2}>
+            {testResult.test_method}
+          </Badge>
+        </Flex>
+
+        {/* One-Sample T-Test 또는 One-Way ANOVA 결과 */}
+        {result.group_stats && result.test_stats && (
+          <>
+            <StatsTable title="그룹 통계량" data={result.group_stats} />
+            <StatsTable title="검정 통계량" data={result.test_stats} />
+          </>
+        )}
+
+        {/* Paired T-Test 또는 Independent T-Test 결과 */}
+        {result.group1_stats && result.group2_stats && (
+          <>
+            <StatsTable
+              title={`그룹 통계량: ${result.group1_stats.group_name}`}
+              data={result.group1_stats}
+            />
+            <StatsTable
+              title={`그룹 통계량: ${result.group2_stats.group_name}`}
+              data={result.group2_stats}
+            />
+            {result.diff_stats && (
+              <StatsTable title="차이 통계량" data={result.diff_stats} />
+            )}
+            <StatsTable title="검정 통계량" data={result.test_stats} />
+          </>
+        )}
+
+        {/* LLM 결과 및 결론 */}
+        {(testResult.results || testResult.conclusion) && (
+          <Box mt={6} p={4} borderWidth="1px" borderRadius="lg">
+            {testResult.results && (
+              <Box mb={4}>
+                <Heading size="md" mb={2}>
+                  분석 결과 해석
+                </Heading>
+                <Text whiteSpace="pre-wrap">{testResult.results}</Text>
+              </Box>
+            )}
+
+            {testResult.conclusion && (
+              <Box>
+                <Heading size="md" mb={2}>
+                  결론
+                </Heading>
+                <Text whiteSpace="pre-wrap">{testResult.conclusion}</Text>
+              </Box>
+            )}
+          </Box>
+        )}
       </Box>
     );
   };
@@ -298,7 +418,53 @@ const Result = () => {
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </Collapse>
-                <div>asdfasdf</div>
+
+                {/* 통계 테스트 목록 */}
+                <Box>
+                  <Heading size="md" mb={3}>
+                    통계 분석 목록
+                  </Heading>
+                  <Divider mb={3} />
+
+                  {isLoadingTests ? (
+                    <Text>로딩 중...</Text>
+                  ) : testList.length > 0 ? (
+                    <List spacing={2}>
+                      {testList.map((test) => (
+                        <ListItem
+                          key={test.id}
+                          p={2}
+                          borderRadius="md"
+                          bg={
+                            selectedTestId === test.id
+                              ? "blue.50"
+                              : "transparent"
+                          }
+                          _hover={{ bg: "gray.100" }}
+                          cursor="pointer"
+                          onClick={() => handleSelectTest(test.id)}
+                        >
+                          <Flex justify="space-between" align="center">
+                            <Text
+                              fontWeight={
+                                selectedTestId === test.id ? "bold" : "normal"
+                              }
+                            >
+                              {test.alias}
+                            </Text>
+                            <Badge colorScheme="blue" variant="outline">
+                              #{test.id}
+                            </Badge>
+                          </Flex>
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Text color="gray.500">
+                      아직 수행된 통계 분석이 없습니다.
+                    </Text>
+                  )}
+                </Box>
               </div>
             </div>
           </div>
