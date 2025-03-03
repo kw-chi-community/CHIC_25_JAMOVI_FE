@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   CardBody,
@@ -9,6 +9,10 @@ import {
   Select,
   Button,
   useToast,
+  Textarea,
+  Box,
+  Heading,
+  Tooltip,
 } from "@chakra-ui/react";
 import { useTableData } from "../contexts/TableDataContext";
 import { useSearchParams } from "react-router-dom";
@@ -59,6 +63,9 @@ const OptionForm = () => {
   const [descriptiveStats, setDescriptiveStats] = useState(true);
   const [userSelectedHypothesis, setUserSelectedHypothesis] = useState(false);
   const [userSelectedEffectSize, setUserSelectedEffectSize] = useState(false);
+  // 실험 설계 방식과 피험자 정보를 위한 상태 추가
+  const [experimentDesign, setExperimentDesign] = useState("");
+  const [subjectInfo, setSubjectInfo] = useState("");
 
   const [dataInputs, setDataInputs] = useState([
     { id: 1, column: "a", startRow: "", endRow: "", groupName: "" },
@@ -66,6 +73,72 @@ const OptionForm = () => {
 
   const toast = useToast();
   const { setAnalysisResult } = useResult();
+
+  const experimentDesignTimerRef = useRef(null);
+  const subjectInfoTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (projectId) {
+      const savedExperimentDesign = localStorage.getItem(
+        `experimentDesign_${projectId}`
+      );
+      const savedSubjectInfo = localStorage.getItem(`subjectInfo_${projectId}`);
+
+      if (savedExperimentDesign) {
+        setExperimentDesign(savedExperimentDesign);
+      }
+
+      if (savedSubjectInfo) {
+        setSubjectInfo(savedSubjectInfo);
+      }
+    }
+  }, [projectId]);
+
+  const saveToLocalStorage = useCallback(
+    (key, value) => {
+      if (projectId) {
+        localStorage.setItem(key, value);
+      }
+    },
+    [projectId]
+  );
+
+  const handleExperimentDesignChange = (e) => {
+    const newValue = e.target.value;
+    setExperimentDesign(newValue);
+
+    if (experimentDesignTimerRef.current) {
+      clearTimeout(experimentDesignTimerRef.current);
+    }
+
+    experimentDesignTimerRef.current = setTimeout(() => {
+      saveToLocalStorage(`experimentDesign_${projectId}`, newValue);
+    }, 500);
+  };
+
+  const handleSubjectInfoChange = (e) => {
+    const newValue = e.target.value;
+    setSubjectInfo(newValue);
+
+    if (subjectInfoTimerRef.current) {
+      clearTimeout(subjectInfoTimerRef.current);
+    }
+
+    subjectInfoTimerRef.current = setTimeout(() => {
+      saveToLocalStorage(`subjectInfo_${projectId}`, newValue);
+    }, 500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (experimentDesignTimerRef.current) {
+        clearTimeout(experimentDesignTimerRef.current);
+      }
+      if (subjectInfoTimerRef.current) {
+        clearTimeout(subjectInfoTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (testMethodMappings[test]) {
@@ -192,6 +265,20 @@ const OptionForm = () => {
       return;
     }
 
+    if (projectId) {
+      localStorage.setItem(`experimentDesign_${projectId}`, experimentDesign);
+      localStorage.setItem(`subjectInfo_${projectId}`, subjectInfo);
+
+      toast({
+        title: "정보 저장 완료",
+        description: "실험 설계 및 피험자 정보가 저장되었습니다.",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+        position: "bottom-right",
+      });
+    }
+
     const transformedData = {};
 
     dataInputs.forEach((input) => {
@@ -281,6 +368,8 @@ const OptionForm = () => {
       effectSizeValue: parseFloat(effectSizeValue),
       descriptiveStats,
       value: transformedData,
+      experimentDesign,
+      subjectInfo,
     };
 
     console.log("Sending request to /statistics/run:", requestData);
@@ -351,6 +440,8 @@ const OptionForm = () => {
         endRow: parseInt(rest.endRow, 10),
       })),
       groupData: transformedData,
+      experimentDesign,
+      subjectInfo,
     };
 
     console.log(formData);
@@ -392,6 +483,60 @@ const OptionForm = () => {
                   <p className="text-center mt-1">{item.label}</p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="mb-6 p-4 border rounded bg-gray-100">
+            <h1 className="font-bold text-lg mb-3">실험 설계 및 피험자 정보</h1>
+            <div className="mb-4">
+              <div className="flex items-center mb-2">
+                <label className="font-medium">실험 설계 방식</label>
+                <Tooltip
+                  label="실험의 독립변수, 종속변수, 통제변수 등 실험 설계에 대한 상세 정보를 입력하세요."
+                  placement="top"
+                ></Tooltip>
+              </div>
+              <Textarea
+                value={experimentDesign}
+                onChange={handleExperimentDesignChange}
+                placeholder="예시: 독립변수 - 학습 방법(2수준: 전통적 방법, 새로운 방법), 종속변수 - 시험 점수, 통제변수 - 학습 시간, 사전 지식 수준"
+                size="md"
+                resize="vertical"
+                minHeight="100px"
+                className="w-full"
+                bg="white"
+                borderColor="gray.300"
+                _hover={{ borderColor: "gray.400" }}
+                _focus={{
+                  borderColor: "blue.500",
+                  boxShadow: "0 0 0 1px blue.500",
+                }}
+              />
+            </div>
+            <div>
+              <div className="flex items-center mb-2">
+                <label className="font-medium">피험자 정보</label>
+                <Tooltip
+                  label="피험자의 수, 연령대, 성별 분포, 선정 기준 등 피험자에 대한 정보를 입력하세요."
+                  placement="top"
+                ></Tooltip>
+              </div>
+              <Textarea
+                value={subjectInfo}
+                onChange={handleSubjectInfoChange}
+                placeholder="예시: 총 30명(남성 15명, 여성 15명), 연령대 20-30세, 평균 연령 24.5세, 선정 기준 - 정상 시력 또는 교정시력, 색맹 없음"
+                size="md"
+                resize="vertical"
+                minHeight="100px"
+                className="w-full"
+                bg="white"
+                borderColor="gray.300"
+                _hover={{ borderColor: "gray.400" }}
+                _focus={{
+                  borderColor: "blue.500",
+                  boxShadow: "0 0 0 1px blue.500",
+                }}
+              />
             </div>
           </div>
 

@@ -227,6 +227,8 @@ const Result = () => {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [newAlias, setNewAlias] = useState("");
   const [activeMenu, setActiveMenu] = useState(null);
+  const [isLoadingLlmResults, setIsLoadingLlmResults] = useState(false);
+  const [llmResults, setLlmResults] = useState(null);
 
   useEffect(() => {
     if (analysisResult) {
@@ -236,6 +238,8 @@ const Result = () => {
       console.log("Normalized result:", normalizedResult);
 
       setTestResult(normalizedResult);
+
+      fetchLlmResults(normalizedResult);
 
       const resultElement = document.getElementById("result-section");
       if (resultElement) {
@@ -293,6 +297,8 @@ const Result = () => {
     if (!testId || !projectId) return;
 
     setIsLoadingResult(true);
+    setLlmResults(null);
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/statistics/${projectId}/${testId}`,
@@ -309,9 +315,11 @@ const Result = () => {
 
       const data = await response.json();
       if (data.success) {
-        console.log("Test result from API:", data);
+        console.log("Test result:", data);
         const normalizedResult = normalizeAnalysisResult(data);
         setTestResult(normalizedResult);
+
+        fetchLlmResults(normalizedResult);
       }
     } catch (error) {
       console.error(`Error fetching test result for ID ${testId}:`, error);
@@ -540,6 +548,134 @@ const Result = () => {
     };
   }, []);
 
+  const fetchLlmResults = async (testResult) => {
+    if (!testResult || !testResult.statistical_test_result) return;
+
+    setIsLoadingLlmResults(true);
+
+    try {
+      let testType = "ost";
+      const result = testResult.statistical_test_result;
+
+      if (result.group_stats && !result.group1_stats) {
+        testType = "owa";
+      } else if (result.group1_stats && result.group2_stats) {
+        if (result.diff_stats) {
+          testType = "pt";
+        } else {
+          testType = "itt";
+        }
+      }
+
+      const testId = testResult.id || 0; // null 대신 0을 기본값으로 사용
+
+      console.log("Requesting LLM results for test type:", testType);
+
+      const experimentalDesign =
+        localStorage.getItem(`experimentDesign_${projectId}`) || "";
+      const subjectInfo =
+        localStorage.getItem(`subjectInfo_${projectId}`) || "";
+
+      const questionStr = JSON.stringify(result);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/llm/results`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            test_type: testType,
+            question: questionStr,
+            statistical_test_id: testId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("LLM results received:", data);
+
+      setLlmResults(data);
+
+      if (data.success && data.output) {
+        setTestResult((prev) => ({
+          ...prev,
+          results: data.output,
+          conclusion: "",
+        }));
+
+        if (data.output) {
+          try {
+            console.log("Requesting LLM conclusion");
+            const conclusionResponse = await fetch(
+              `${import.meta.env.VITE_BACKEND_URL}/llm/conclusion`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  test_type: testType,
+                  experimental_design: experimentalDesign,
+                  subject_info: subjectInfo,
+                  question: data.output, // LLM 결과를 그대로 전달
+                  statistical_test_id: testId,
+                }),
+              }
+            );
+
+            if (!conclusionResponse.ok) {
+              throw new Error(
+                `HTTP error! Status: ${conclusionResponse.status}`
+              );
+            }
+
+            const conclusionData = await conclusionResponse.json();
+            console.log("LLM conclusion received:", conclusionData);
+
+            setTestResult((prev) => ({
+              ...prev,
+              conclusion: conclusionData,
+            }));
+          } catch (error) {
+            console.error("Error fetching LLM conclusion:", error);
+            toast({
+              title: "LLM 해석 로딩 오류",
+              description: `분석 결과 해석을 가져오는 중 오류가 발생했습니다: ${error.message}`,
+              status: "error",
+              duration: 3000,
+              isClosable: true,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching LLM results:", error);
+      toast({
+        title: "LLM 결과 로딩 오류",
+        description: `분석 결과 해석을 가져오는 중 오류가 발생했습니다: ${error.message}`,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoadingLlmResults(false);
+    }
+  };
+
+  useEffect(() => {
+    if (testResult && !llmResults && !isLoadingLlmResults) {
+      fetchLlmResults(testResult);
+    }
+  }, [testResult]);
+
   const renderResults = () => {
     if (isLoadingResult) {
       return (
@@ -683,34 +819,57 @@ const Result = () => {
         )}
 
         {/* LLM 결과 및 결론 */}
-        {(result.results ||
-          result.conclusion ||
-          testResult.results ||
-          testResult.conclusion) && (
+        {isLoadingLlmResults ? (
           <Box mt={6} p={4} borderWidth="1px" borderRadius="lg">
-            {(result.results || testResult.results) && (
+            <Flex direction="column" align="center" justify="center">
+              <Spinner size="md" mb={2} />
+              <Text>AI가 분석 결과를 해석하는 중입니다...</Text>
+            </Flex>
+          </Box>
+        ) : (
+          (testResult.results || (llmResults && llmResults.output)) && (
+            <Box mt={6} p={4} borderWidth="1px" borderRadius="lg">
               <Box mb={4}>
                 <Heading size="md" mb={2}>
-                  분석 결과 해석
+                  통계 결과 해석
                 </Heading>
                 <Text whiteSpace="pre-wrap">
-                  {result.results || testResult.results}
+                  {testResult.results ||
+                    (llmResults && llmResults.output) ||
+                    ""}
                 </Text>
               </Box>
-            )}
 
-            {(result.conclusion || testResult.conclusion) && (
-              <Box>
-                <Heading size="md" mb={2}>
-                  결론
-                </Heading>
-                <Text whiteSpace="pre-wrap">
-                  {result.conclusion || testResult.conclusion}
-                </Text>
-              </Box>
-            )}
-          </Box>
+              {testResult.conclusion && (
+                <Box mt={4} pt={4} borderTopWidth="1px">
+                  <Heading size="md" mb={2}>
+                    결론
+                  </Heading>
+                  <Text whiteSpace="pre-wrap">
+                    {testResult.conclusion.output ||
+                      (typeof testResult.conclusion === "string"
+                        ? testResult.conclusion
+                        : "")}
+                  </Text>
+                </Box>
+              )}
+            </Box>
+          )
         )}
+
+        {!isLoadingLlmResults &&
+          !testResult.results &&
+          !(llmResults && llmResults.output) && (
+            <Box mt={6}>
+              <Button
+                colorScheme="purple"
+                onClick={() => fetchLlmResults(testResult)}
+                isLoading={isLoadingLlmResults}
+              >
+                AI 해석 요청하기
+              </Button>
+            </Box>
+          )}
       </Box>
     );
   };
