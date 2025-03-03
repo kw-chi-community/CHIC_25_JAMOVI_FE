@@ -86,9 +86,11 @@ const formatStatKey = (key) => {
     mean: "평균",
     sd: "표준편차",
     se: "표준오차",
+    var: "분산",
     min: "최소값",
     max: "최대값",
     median: "중앙값",
+
     t_statistic: "t 통계량",
     df: "자유도",
     p_value: "p-값",
@@ -96,21 +98,107 @@ const formatStatKey = (key) => {
     confidence_interval_upper: "신뢰구간 상한",
     conf_level: "신뢰수준",
     mu: "모평균",
+    paired: "대응 여부",
+    equal_var: "등분산 가정",
+
+    f_statistic: "F 통계량",
+    between_ss: "집단 간 제곱합",
+    within_ss: "집단 내 제곱합",
+    total_ss: "총 제곱합",
+    between_df: "집단 간 자유도",
+    within_df: "집단 내 자유도",
+    total_df: "총 자유도",
+    between_ms: "집단 간 평균 제곱",
+    within_ms: "집단 내 평균 제곱",
+    eta_squared: "에타 제곱",
+    omega_squared: "오메가 제곱",
+
+    comparison: "비교 그룹",
+    mean_diff: "평균 차이",
+
+    test_method: "검정 방법",
+    alternative: "대립 가설",
+    statistic: "검정 통계량",
+    effect_size: "효과 크기",
+    power: "검정력",
   };
 
-  return keyMap[key] || key;
+  return (
+    keyMap[key] ||
+    key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+  );
 };
 
 const formatNumber = (num) => {
-  if (Math.abs(num) < 0.0001) {
-    return num.toExponential(6);
+  if (num === null || num === undefined || isNaN(num)) {
+    return "-";
   }
-  return Number.isInteger(num) ? num : num.toFixed(4);
+
+  if (Math.abs(num) < 0.0001) {
+    return num.toExponential(4);
+  }
+
+  if (Number.isInteger(num)) {
+    return num;
+  }
+
+  if (
+    typeof num._fieldName === "string" &&
+    num._fieldName.includes("p_value")
+  ) {
+    return num.toFixed(3);
+  }
+
+  if (Math.abs(num) < 0.01) {
+    return num.toFixed(6);
+  } else if (Math.abs(num) < 0.1) {
+    return num.toFixed(5);
+  } else {
+    return num.toFixed(4);
+  }
 };
 
 const Result = () => {
   const navigate = useNavigate();
   const { analysisResult, setAnalysisResult } = useResult();
+
+  const normalizeAnalysisResult = (result) => {
+    if (!result) return null;
+
+    console.log("Normalizing result structure:", result);
+
+    if (result.success && result.result) {
+      return {
+        alias: "최근 분석 결과",
+        test_method: result.test_method || "통계 분석",
+        id: result.test_id,
+        statistical_test_result: result.result,
+      };
+    }
+
+    if (result.statistical_test_result) {
+      return result;
+    }
+
+    let testMethod = result.test_method || "통계 분석";
+
+    if (!testMethod || testMethod === "통계 분석") {
+      if (result.group_stats && !result.group1_stats) {
+        testMethod = "One-Way ANOVA";
+      } else if (result.group1_stats && result.group2_stats) {
+        testMethod = result.paired ? "Paired T-Test" : "Independent T-Test";
+      } else if (result.test_stats && result.test_stats.t_statistic) {
+        testMethod = "T-Test";
+      }
+    }
+
+    return {
+      alias: result.alias || "분석 결과",
+      test_method: testMethod,
+      id: result.id,
+      statistical_test_result: result,
+    };
+  };
 
   const handleNavigateToLogin = () => {
     navigate("/login");
@@ -139,6 +227,24 @@ const Result = () => {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [newAlias, setNewAlias] = useState("");
   const [activeMenu, setActiveMenu] = useState(null);
+
+  useEffect(() => {
+    if (analysisResult) {
+      console.log("New analysis result received:", analysisResult);
+
+      const normalizedResult = normalizeAnalysisResult(analysisResult);
+      console.log("Normalized result:", normalizedResult);
+
+      setTestResult(normalizedResult);
+
+      const resultElement = document.getElementById("result-section");
+      if (resultElement) {
+        resultElement.scrollIntoView({ behavior: "smooth" });
+      }
+
+      setSelectedTestId(null);
+    }
+  }, [analysisResult]);
 
   useEffect(() => {
     console.log("현재 프로젝트 ID:", projectId);
@@ -203,8 +309,9 @@ const Result = () => {
 
       const data = await response.json();
       if (data.success) {
-        console.log("Test result:", data);
-        setTestResult(data);
+        console.log("Test result from API:", data);
+        const normalizedResult = normalizeAnalysisResult(data);
+        setTestResult(normalizedResult);
       }
     } catch (error) {
       console.error(`Error fetching test result for ID ${testId}:`, error);
@@ -455,60 +562,151 @@ const Result = () => {
     }
 
     const result = testResult.statistical_test_result;
+    if (!result) {
+      console.error("No statistical test result found in:", testResult);
+      return (
+        <Box p={4} textAlign="center">
+          <Text color="red.500">
+            분석 결과 데이터가 올바르지 않습니다. 다시 시도해주세요.
+          </Text>
+        </Box>
+      );
+    }
+
+    console.log("Rendering result:", result);
 
     return (
       <Box p={4}>
         <Flex justify="space-between" align="center" mb={4}>
           <Heading size="lg">{testResult.alias}</Heading>
-          <Badge colorScheme="blue" fontSize="md" p={2}>
-            {testResult.test_method}
-          </Badge>
+          <Flex>
+            {testResult.alias === "최근 분석 결과" && (
+              <Badge colorScheme="green" fontSize="md" p={2} mr={2}>
+                최신 결과
+              </Badge>
+            )}
+            <Badge colorScheme="blue" fontSize="md" p={2}>
+              {testResult.test_method}
+            </Badge>
+          </Flex>
         </Flex>
 
-        {/* One-Sample T-Test 또는 One-Way ANOVA 결과 */}
-        {result.group_stats && result.test_stats && (
+        {result.group_stats && !result.group1_stats && (
           <>
             <StatsTable title="그룹 통계량" data={result.group_stats} />
-            <StatsTable title="검정 통계량" data={result.test_stats} />
+            {result.test_stats && (
+              <StatsTable title="검정 통계량" data={result.test_stats} />
+            )}
+            {result.post_hoc && (
+              <Box mb={6}>
+                <Heading size="md" mb={2}>
+                  사후 검정 결과
+                </Heading>
+                <Table variant="simple" size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th>비교 그룹</Th>
+                      <Th>평균 차이</Th>
+                      <Th>p-값</Th>
+                      <Th>유의성</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {result.post_hoc.map((item, index) => (
+                      <Tr key={index}>
+                        <Td>{item.comparison}</Td>
+                        <Td isNumeric>{formatNumber(item.mean_diff)}</Td>
+                        <Td isNumeric>{formatNumber(item.p_value)}</Td>
+                        <Td>
+                          {item.p_value < 0.05 ? (
+                            <Badge colorScheme="green">유의함</Badge>
+                          ) : (
+                            <Badge colorScheme="red">유의하지 않음</Badge>
+                          )}
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
+            )}
           </>
         )}
 
-        {/* Paired T-Test 또는 Independent T-Test 결과 */}
         {result.group1_stats && result.group2_stats && (
           <>
             <StatsTable
-              title={`그룹 통계량: ${result.group1_stats.group_name}`}
+              title={`그룹 통계량: ${
+                result.group1_stats.group_name || "그룹 1"
+              }`}
               data={result.group1_stats}
             />
             <StatsTable
-              title={`그룹 통계량: ${result.group2_stats.group_name}`}
+              title={`그룹 통계량: ${
+                result.group2_stats.group_name || "그룹 2"
+              }`}
               data={result.group2_stats}
             />
             {result.diff_stats && (
               <StatsTable title="차이 통계량" data={result.diff_stats} />
             )}
+            {result.test_stats && (
+              <StatsTable title="검정 통계량" data={result.test_stats} />
+            )}
+          </>
+        )}
+
+        {!result.group_stats && !result.group1_stats && result.test_stats && (
+          <>
+            {result.sample_stats && (
+              <StatsTable title="표본 통계량" data={result.sample_stats} />
+            )}
             <StatsTable title="검정 통계량" data={result.test_stats} />
           </>
         )}
 
+        {!result.group_stats && !result.group1_stats && !result.test_stats && (
+          <Box p={4} textAlign="center">
+            <Text color="orange.500">
+              알 수 없는 형식의 분석 결과입니다. 원본 데이터를 표시합니다.
+            </Text>
+            <Box
+              mt={4}
+              p={4}
+              borderWidth="1px"
+              borderRadius="lg"
+              overflowX="auto"
+            >
+              <pre>{JSON.stringify(result, null, 2)}</pre>
+            </Box>
+          </Box>
+        )}
+
         {/* LLM 결과 및 결론 */}
-        {(testResult.results || testResult.conclusion) && (
+        {(result.results ||
+          result.conclusion ||
+          testResult.results ||
+          testResult.conclusion) && (
           <Box mt={6} p={4} borderWidth="1px" borderRadius="lg">
-            {testResult.results && (
+            {(result.results || testResult.results) && (
               <Box mb={4}>
                 <Heading size="md" mb={2}>
                   분석 결과 해석
                 </Heading>
-                <Text whiteSpace="pre-wrap">{testResult.results}</Text>
+                <Text whiteSpace="pre-wrap">
+                  {result.results || testResult.results}
+                </Text>
               </Box>
             )}
 
-            {testResult.conclusion && (
+            {(result.conclusion || testResult.conclusion) && (
               <Box>
                 <Heading size="md" mb={2}>
                   결론
                 </Heading>
-                <Text whiteSpace="pre-wrap">{testResult.conclusion}</Text>
+                <Text whiteSpace="pre-wrap">
+                  {result.conclusion || testResult.conclusion}
+                </Text>
               </Box>
             )}
           </Box>
@@ -562,7 +760,7 @@ const Result = () => {
             {isCollapsed && <div className="m-5" />}
 
             <div className="flex w-full h-full">
-              <div className="w-3/4 pt-0 pl-0 p-5">
+              <div id="result-section" className="w-3/4 pt-0 pl-0 p-5">
                 {!isCollapsed && <div className="pt-5" />}
                 {renderResults()}
               </div>

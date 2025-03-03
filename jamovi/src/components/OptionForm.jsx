@@ -309,7 +309,13 @@ const OptionForm = () => {
       })
       .then((data) => {
         console.log("Statistics result:", data);
-        setAnalysisResult(data);
+
+        const resultWithMethod = {
+          ...data,
+          test_method: testTypes.find((t) => t.id === test)?.label || test,
+        };
+
+        setAnalysisResult(resultWithMethod);
 
         toast({
           title: "분석 완료",
