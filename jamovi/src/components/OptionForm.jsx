@@ -28,15 +28,15 @@ const testMethodMappings = {
   },
   PairedTTest: {
     hypothesis: "TwoTailedDiff",
-    effectSize: "Cohens_d",
+    effectSize: "Cohens_D",
   },
   IndependentTTest: {
     hypothesis: "TwoTailedDiff",
-    effectSize: "Cohens_d",
+    effectSize: "Cohens_D",
   },
   OneSampleTTest: {
     hypothesis: "TwoTailedDiff",
-    effectSize: "Cohens_d",
+    effectSize: "Cohens_D",
   },
 };
 
@@ -232,13 +232,49 @@ const OptionForm = () => {
 
     console.log("Transformed data:", transformedData);
 
+    const requiredGroups = {
+      OneWayANOVA: 2,
+      PairedTTest: 2,
+      IndependentTTest: 2,
+      OneSampleTTest: 1,
+    };
+
+    const groupCount = Object.keys(transformedData).length;
+
+    if (groupCount < requiredGroups[test]) {
+      toast({
+        title: "데이터 오류",
+        description: `${test}는 최소 ${requiredGroups[test]}개의 그룹이 필요합니다.`,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    if (
+      (test === "PairedTTest" ||
+        test === "IndependentTTest" ||
+        test === "OneSampleTTest") &&
+      groupCount !== requiredGroups[test]
+    ) {
+      toast({
+        title: "데이터 오류",
+        description: `${test}는 ${requiredGroups[test]}개의 그룹이 필요합니다.`,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     const requestData = {
       test,
       hypothesis,
       missingValueHandling: "pairwise",
       meanDifference,
       confidenceInterval:
-        confidenceInterval === "" ? null : parseFloat(confidenceInterval),
+        confidenceInterval === "" ? 95 : parseFloat(confidenceInterval),
       effectSize,
       effectSizeValue: parseFloat(effectSizeValue),
       descriptiveStats,
@@ -482,7 +518,7 @@ const OptionForm = () => {
                   }}
                   className="mt-2 border-gray-300 rounded-md"
                 >
-                  <option value="Cohens_d">Cohen's d</option>
+                  <option value="Cohens_D">Cohen's D</option>
                   <option value="Eta_Squared">Eta squared</option>
                   <option value="Standardized_Mean_Difference">
                     Standardized Mean Difference
