@@ -28,7 +28,7 @@ import {
   Flex,
   Spinner,
 } from "@chakra-ui/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { DndContext } from "@dnd-kit/core";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -133,6 +133,12 @@ const Result = () => {
   const [selectedTestId, setSelectedTestId] = useState(null);
   const [testResult, setTestResult] = useState(null);
   const [isLoadingResult, setIsLoadingResult] = useState(false);
+  const [testToDelete, setTestToDelete] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [testToRename, setTestToRename] = useState(null);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [newAlias, setNewAlias] = useState("");
+  const [activeMenu, setActiveMenu] = useState(null);
 
   useEffect(() => {
     console.log("현재 프로젝트 ID:", projectId);
@@ -274,6 +280,159 @@ const Result = () => {
     setIsCollapsed(!isCollapsed);
   };
 
+  const handleDeleteTest = async () => {
+    if (!testToDelete) return;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/statistics/${testToDelete}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setTestList(testList.filter((test) => test.id !== testToDelete));
+
+        if (selectedTestId === testToDelete) {
+          setSelectedTestId(null);
+          setTestResult(null);
+        }
+
+        toast({
+          title: "삭제 완료",
+          description: "통계 분석 결과가 성공적으로 삭제되었습니다.",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error(`Error deleting test ID ${testToDelete}:`, error);
+      toast({
+        title: "삭제 오류",
+        description: `통계 분석 결과를 삭제하는 중 오류가 발생했습니다: ${error.message}`,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setTestToDelete(null);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const openDeleteConfirm = (testId, e) => {
+    e.stopPropagation();
+    setTestToDelete(testId);
+    setShowDeleteConfirm(true);
+  };
+
+  const closeDeleteConfirm = () => {
+    setShowDeleteConfirm(false);
+    setTestToDelete(null);
+  };
+
+  const openRenameModal = (test, e) => {
+    e.stopPropagation();
+    setTestToRename(test.id);
+    setNewAlias(test.alias);
+    setShowRenameModal(true);
+  };
+
+  const closeRenameModal = () => {
+    setShowRenameModal(false);
+    setTestToRename(null);
+    setNewAlias("");
+  };
+
+  const handleRenameTest = async () => {
+    if (!testToRename || !newAlias.trim()) return;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/statistics/${testToRename}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ new_alias: newAlias.trim() }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setTestList(
+          testList.map((test) =>
+            test.id === testToRename
+              ? { ...test, alias: newAlias.trim() }
+              : test
+          )
+        );
+
+        if (selectedTestId === testToRename && testResult) {
+          setTestResult({
+            ...testResult,
+            alias: newAlias.trim(),
+          });
+        }
+
+        toast({
+          title: "이름 변경 완료",
+          description: "통계 분석 이름이 성공적으로 변경되었습니다.",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error(`Error renaming test ID ${testToRename}:`, error);
+      toast({
+        title: "이름 변경 오류",
+        description: `통계 분석 이름을 변경하는 중 오류가 발생했습니다: ${error.message}`,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      closeRenameModal();
+    }
+  };
+
+  const toggleMenu = (testId, e) => {
+    e.stopPropagation();
+    setActiveMenu(activeMenu === testId ? null : testId);
+  };
+
+  const closeMenu = () => {
+    setActiveMenu(null);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      closeMenu();
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
+
   const renderResults = () => {
     if (isLoadingResult) {
       return (
@@ -288,7 +447,8 @@ const Result = () => {
       return (
         <Box p={4} textAlign="center">
           <Text color="gray.500">
-            왼쪽 목록에서 통계 분석 결과를 선택하거나 새로운 분석을 실행하세요.
+            오른쪽 목록에서 통계 분석 결과를 선택하거나 새로운 분석을
+            실행하세요.
           </Text>
         </Box>
       );
@@ -449,12 +609,104 @@ const Result = () => {
                               fontWeight={
                                 selectedTestId === test.id ? "bold" : "normal"
                               }
+                              flex="1"
                             >
                               {test.alias}
                             </Text>
-                            <Badge colorScheme="blue" variant="outline">
-                              #{test.id}
-                            </Badge>
+                            <Flex align="center">
+                              <div className="relative">
+                                <button
+                                  className="text-gray-500 hover:text-gray-700 p-1"
+                                  onClick={(e) => toggleMenu(test.id, e)}
+                                  aria-label="Options"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <circle cx="12" cy="12" r="1"></circle>
+                                    <circle cx="12" cy="5" r="1"></circle>
+                                    <circle cx="12" cy="19" r="1"></circle>
+                                  </svg>
+                                </button>
+
+                                {activeMenu === test.id && (
+                                  <div
+                                    className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg z-10 border border-gray-200"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <div className="py-1">
+                                      <button
+                                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        onClick={(e) =>
+                                          openRenameModal(test, e)
+                                        }
+                                      >
+                                        <svg
+                                          className="mr-2"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                        이름 변경
+                                      </button>
+                                      <button
+                                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                                        onClick={(e) =>
+                                          openDeleteConfirm(test.id, e)
+                                        }
+                                      >
+                                        <svg
+                                          className="mr-2"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M3 6h18"></path>
+                                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                          <line
+                                            x1="10"
+                                            y1="11"
+                                            x2="10"
+                                            y2="17"
+                                          ></line>
+                                          <line
+                                            x1="14"
+                                            y1="11"
+                                            x2="14"
+                                            y2="17"
+                                          ></line>
+                                        </svg>
+                                        삭제
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </Flex>
                           </Flex>
                         </ListItem>
                       ))}
@@ -470,7 +722,67 @@ const Result = () => {
           </div>
         </Card>
 
-        {/* 프로젝트 수정 모달 */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-bold mb-4">통계 분석 결과 삭제</h3>
+              <p className="mb-6">
+                이 통계 분석 결과를 삭제하시겠습니까? 이 작업은 되돌릴 수
+                없습니다.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                  onClick={closeDeleteConfirm}
+                >
+                  취소
+                </button>
+                <button
+                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                  onClick={handleDeleteTest}
+                >
+                  삭제
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showRenameModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-bold mb-4">통계 분석 이름 변경</h3>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  새 이름
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newAlias}
+                  onChange={(e) => setNewAlias(e.target.value)}
+                  placeholder="새 이름을 입력하세요"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                  onClick={closeRenameModal}
+                >
+                  취소
+                </button>
+                <button
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  onClick={handleRenameTest}
+                  disabled={!newAlias.trim()}
+                >
+                  변경
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Modal isOpen={isOpen} onClose={onClose}>
           <ModalOverlay />
           <ModalContent>
