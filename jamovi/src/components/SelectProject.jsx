@@ -1,13 +1,39 @@
 // src/components/SelectProject.jsx
-import React, { useEffect } from "react";
-import { Card, Button, Spinner, Text, useToast } from "@chakra-ui/react";
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  Button,
+  Spinner,
+  Text,
+  useToast,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
+  Textarea,
+  useDisclosure,
+} from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
+import { FiMoreVertical } from "react-icons/fi"; // 점 세 개 아이콘
 import useProj from "../hooks/useProj"; // useProj 훅 임포트
 
 const SelectProject = () => {
-  const { projects, isLoading, error, fetchProjects } = useProj();
+  const { projects, isLoading, error, fetchProjects, delProj, updateProject } = useProj();
   const navigate = useNavigate();
   const toast = useToast();
+
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
 
   useEffect(() => {
     fetchProjects();
@@ -31,6 +57,36 @@ const SelectProject = () => {
 
   const handleSelectProject = (projectId) => {
     navigate(`/home?id=${projectId}`);
+  };
+
+  const handleEditProject = async () => {
+    if (!selectedProject) return;
+
+    try {
+      await updateProject(selectedProject.id, {
+        name: newName,
+        description: newDescription,
+      });
+
+      toast({
+        title: "수정 완료",
+        description: "프로젝트가 성공적으로 수정되었습니다.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      fetchProjects(); // 수정 후 목록 다시 불러오기
+      onClose();
+    } catch (err) {
+      toast({
+        title: "수정 실패",
+        description: err.message || "프로젝트 수정 중 오류가 발생했습니다.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
   return (
@@ -58,16 +114,71 @@ const SelectProject = () => {
                 {projects.map((project) => (
                   <li
                     key={project.id}
-                    className="p-4 border rounded-lg hover:bg-gray-100 cursor-pointer"
-                    onClick={() => handleSelectProject(project.id)}
+                    className="p-4 border rounded-lg flex justify-between items-center hover:bg-gray-100"
                   >
-                    <Text className="font-semibold">{project.name}</Text>
-                    <Text className="text-sm text-gray-500">
-                      {project.visibility === "public" ? "공개" : "비공개"}
-                    </Text>
-                    <Text className="text-xs text-gray-400">
-                      {project.description}
-                    </Text>
+                    <div
+                      className="cursor-pointer flex-1"
+                      onClick={() => handleSelectProject(project.id)}
+                    >
+                      <Text className="font-semibold">{project.name}</Text>
+                      <Text className="text-sm text-gray-500">
+                        {project.visibility === "public" ? "공개" : "비공개"}
+                      </Text>
+                      <Text className="text-xs text-gray-400">
+                        {project.description}
+                      </Text>
+                    </div>
+
+                    {/* 점 세 개 메뉴 버튼 */}
+                    <Menu>
+                      <MenuButton
+                        as={IconButton}
+                        icon={<FiMoreVertical />}
+                        variant="ghost"
+                        aria-label="옵션 열기"
+                      />
+                      <MenuList>
+                        {/* 수정 버튼 */}
+                        <MenuItem
+                          onClick={() => {
+                            setSelectedProject(project);
+                            setNewName(project.name);
+                            setNewDescription(project.description || "");
+                            onOpen();
+                          }}
+                        >
+                          수정
+                        </MenuItem>
+
+                        {/* 삭제 버튼 */}
+                        <MenuItem
+                          onClick={async () => {
+                            try {
+                              await delProj(project.id);
+                              toast({
+                                title: "삭제 완료",
+                                description: "프로젝트가 성공적으로 삭제되었습니다.",
+                                status: "success",
+                                duration: 3000,
+                                isClosable: true,
+                              });
+                            } catch (err) {
+                              toast({
+                                title: "삭제 실패",
+                                description:
+                                  err.message || "프로젝트 삭제 중 오류가 발생했습니다.",
+                                status: "error",
+                                duration: 5000,
+                                isClosable: true,
+                              });
+                            }
+                          }}
+                          color="red.500"
+                        >
+                          삭제
+                        </MenuItem>
+                      </MenuList>
+                    </Menu>
                   </li>
                 ))}
               </ul>
@@ -87,6 +198,32 @@ const SelectProject = () => {
           </Button>
         </div>
       </Card>
+
+      {/* 프로젝트 수정 모달 */}
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>프로젝트 수정</ModalHeader>
+          <ModalBody>
+            <Text mb={2}>프로젝트 이름</Text>
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="새 프로젝트 이름"
+            />
+            <Text mt={4} mb={2}>프로젝트 설명</Text>
+            <Textarea
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="새 프로젝트 설명"
+            />
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onClose} mr={3}>취소</Button>
+            <Button colorScheme="blue" onClick={handleEditProject}>수정</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

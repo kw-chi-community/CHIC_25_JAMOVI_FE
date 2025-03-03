@@ -1,8 +1,21 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-
-import { Card, CardBody, CardHeader, Button, Collapse } from "@chakra-ui/react";
-import { DndContext, closestCenter } from "@dnd-kit/core";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  Card,
+  Button,
+  Collapse,
+  useToast,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
+  Textarea,
+  useDisclosure,
+} from "@chakra-ui/react";
+import { DndContext } from "@dnd-kit/core";
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -10,6 +23,7 @@ import {
   restrictToVerticalAxis,
   restrictToWindowEdges,
 } from "@dnd-kit/modifiers";
+import useProj from "../hooks/useProj"; // ✅ useProj 훅 임포트
 
 const SortableItemComponent = ({ id }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -39,7 +53,7 @@ const SortableItemComponent = ({ id }) => {
           <p>
             본 연구 결과 p값은 0.189로 유의미한지는 모르겠지만 어쨌든 결과가
             나왔습니다. 이 자리에는 이런 식으로 llm이 생성해준 값을 대충
-            집어넣을 예정입니다. 로렘잇섬어쩌고저쩌고
+            집어넣을 예정입니다.
           </p>
         </div>
       </div>
@@ -49,36 +63,80 @@ const SortableItemComponent = ({ id }) => {
 
 const Result = () => {
   const navigate = useNavigate();
-
   const handleNavigateToLogin = () => {
     navigate("/login");
   };
+  const location = useLocation();
+  const { getProject, updateProject, delProj } = useProj(); // ✅ 프로젝트 관련 함수 사용
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const [items, setItems] = useState(["1", "2", "3"]);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const queryParams = new URLSearchParams(location.search);
+  const projectId = queryParams.get("id");
 
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [isCollapsed, setIsCollapsed] = useState(false); // ✅ 추가: Collapse 상태
+  const [items, setItems] = useState(["1", "2", "3"]); // ✅ 추가: items 상태
 
-    if (active.id !== over.id) {
-      setItems((prevItems) => {
-        const oldIndex = prevItems.indexOf(active.id);
-        const newIndex = prevItems.indexOf(over.id);
-        const updatedItems = Array.from(prevItems);
-        updatedItems.splice(oldIndex, 1);
-        updatedItems.splice(newIndex, 0, active.id);
-        return updatedItems;
+  useEffect(() => {
+    console.log("현재 프로젝트 ID:", projectId);
+  }, [projectId]);
+
+  const handleEditProject = async () => {
+    if (!projectId) return;
+
+    try {
+      const projectData = await getProject(Number(projectId)); // ✅ projectId를 숫자로 변환
+      setNewName(projectData.name);
+      setNewDescription(projectData.description || "");
+      onOpen(); // ✅ 모달 열기
+    } catch (err) {
+      toast({
+        title: "불러오기 실패",
+        description: err.message || "프로젝트 정보를 불러오는 중 오류가 발생했습니다.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
       });
     }
   };
 
-  const toggleCollapse = () => {
+  const handleUpdateProject = async () => {
+    if (!projectId) return;
+
+    try {
+      await updateProject(Number(projectId), {
+        name: newName,
+        description: newDescription,
+      });
+
+      toast({
+        title: "수정 완료",
+        description: "프로젝트가 성공적으로 수정되었습니다.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      onClose(); // ✅ 모달 닫기
+    } catch (err) {
+      toast({
+        title: "수정 실패",
+        description: err.message || "프로젝트 수정 중 오류가 발생했습니다.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const toggleCollapse = () => { // ✅ 추가: Collapse 상태 토글 함수
     setIsCollapsed(!isCollapsed);
   };
 
   return (
     <DndContext
-      onDragEnd={handleDragEnd}
       modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
     >
       <div className="pl-2 p-4 w-full h-full">
@@ -91,22 +149,17 @@ const Result = () => {
                     <h1>결과</h1>
                   </div>
                   <div className="w-1/2 flex justify-end space-x-4">
-                    <Button variant="solid">export</Button>
-                    <Button variant="solid">new project</Button>
+                    <Button variant="solid" colorScheme="red" onClick={() => delProj(Number(projectId))}>
+                      Delete
+                    </Button>
+                    <Button variant="solid" onClick={() => navigate("/project")}>
+                      Go to Project
+                    </Button>
+                    <Button variant="solid" colorScheme="blue" onClick={handleEditProject}>
+                      Edit Project
+                    </Button>
                     <Button variant="solid" onClick={handleNavigateToLogin}>
                       logout
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={toggleCollapse}
-                      className="p-0"
-                    >
-                      {isCollapsed ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronUp className="h-4 w-4" />
-                      )}
                     </Button>
                   </div>
                 </div>
@@ -132,7 +185,7 @@ const Result = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={toggleCollapse}
+                    onClick={toggleCollapse} // ✅ 수정: Collapse 버튼 작동
                     className="flex w-full mb-2"
                   >
                     <ChevronDown className="h-4 w-4" />
@@ -143,6 +196,31 @@ const Result = () => {
             </div>
           </div>
         </Card>
+
+        {/* 프로젝트 수정 모달 */}
+        <Modal isOpen={isOpen} onClose={onClose}>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>프로젝트 수정</ModalHeader>
+            <ModalBody>
+              <Input
+                placeholder="새 프로젝트 이름"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                mb={3}
+              />
+              <Textarea
+                placeholder="새 프로젝트 설명"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+              />
+            </ModalBody>
+            <ModalFooter>
+              <Button onClick={onClose} mr={3}>취소</Button>
+              <Button colorScheme="blue" onClick={handleUpdateProject}>수정</Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       </div>
     </DndContext>
   );
