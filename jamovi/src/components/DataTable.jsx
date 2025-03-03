@@ -4,6 +4,7 @@ import useWebSocket from "../hooks/useWebSocket";
 import useTableHandlers from "../hooks/useTableHandlers";
 // import { createInitialData } from "../utils/tableUtils";
 import { Spinner } from "@chakra-ui/react";
+import { useTableData } from "../contexts/TableDataContext";
 
 const DataTable = () => {
   const [searchParams] = useSearchParams();
@@ -12,12 +13,19 @@ const DataTable = () => {
 
   const [data, setData, ws, loading] = useWebSocket(projectId, token);
   const wsRef = useRef(null);
+  const { setTableData } = useTableData();
 
   useEffect(() => {
     if (ws) {
       wsRef.current = ws;
     }
   }, [ws]);
+
+  useEffect(() => {
+    if (data) {
+      setTableData(data);
+    }
+  }, [data, setTableData]);
 
   const {
     editingCell,
