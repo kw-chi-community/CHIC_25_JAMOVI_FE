@@ -229,6 +229,7 @@ const Result = () => {
   const [activeMenu, setActiveMenu] = useState(null);
   const [isLoadingLlmResults, setIsLoadingLlmResults] = useState(false);
   const [llmResults, setLlmResults] = useState(null);
+  const [shouldFetchLlm, setShouldFetchLlm] = useState(false);
 
   useEffect(() => {
     if (analysisResult) {
@@ -567,9 +568,64 @@ const Result = () => {
         }
       }
 
-      const testId = testResult.id || 0; // null 대신 0을 기본값으로 사용
+      const testId = testResult.test_id || 0;
 
-      console.log("Requesting LLM results for test type:", testType);
+      if (testId > 0) {
+        try {
+          console.log(
+            "Checking for existing results and conclusion for test ID:",
+            testId
+          );
+          const existingDataResponse = await fetch(
+            `${import.meta.env.VITE_BACKEND_URL}/llm/output/${testId}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (existingDataResponse.ok) {
+            const existingData = await existingDataResponse.json();
+            console.log("Existing data found:", existingData);
+
+            if (existingData.results || existingData.conclusion) {
+              setLlmResults({
+                success: true,
+                output: existingData.results || "",
+              });
+
+              setTestResult((prev) => {
+                if (
+                  prev.results === existingData.results &&
+                  JSON.stringify(prev.conclusion) ===
+                    JSON.stringify(existingData.conclusion)
+                ) {
+                  return prev;
+                }
+
+                return {
+                  ...prev,
+                  results: existingData.results || "",
+                  conclusion: existingData.conclusion || "",
+                };
+              });
+
+              setIsLoadingLlmResults(false);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Error checking for existing results:", error);
+        }
+      }
+
+      console.log(
+        "No existing results found. Requesting LLM results for test type:",
+        testType
+      );
 
       const experimentalDesign =
         localStorage.getItem(`experimentDesign_${projectId}`) || "";
@@ -604,11 +660,17 @@ const Result = () => {
       setLlmResults(data);
 
       if (data.success && data.output) {
-        setTestResult((prev) => ({
-          ...prev,
-          results: data.output,
-          conclusion: "",
-        }));
+        setTestResult((prev) => {
+          if (prev.results === data.output) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            results: data.output,
+            conclusion: "",
+          };
+        });
 
         if (data.output) {
           try {
@@ -625,7 +687,7 @@ const Result = () => {
                   test_type: testType,
                   experimental_design: experimentalDesign,
                   subject_info: subjectInfo,
-                  question: data.output, // LLM 결과를 그대로 전달
+                  question: data.output,
                   statistical_test_id: testId,
                 }),
               }
@@ -640,10 +702,19 @@ const Result = () => {
             const conclusionData = await conclusionResponse.json();
             console.log("LLM conclusion received:", conclusionData);
 
-            setTestResult((prev) => ({
-              ...prev,
-              conclusion: conclusionData,
-            }));
+            setTestResult((prev) => {
+              if (
+                JSON.stringify(prev.conclusion) ===
+                JSON.stringify(conclusionData)
+              ) {
+                return prev;
+              }
+
+              return {
+                ...prev,
+                conclusion: conclusionData,
+              };
+            });
           } catch (error) {
             console.error("Error fetching LLM conclusion:", error);
             toast({
@@ -672,9 +743,16 @@ const Result = () => {
 
   useEffect(() => {
     if (testResult && !llmResults && !isLoadingLlmResults) {
-      fetchLlmResults(testResult);
+      setShouldFetchLlm(true);
     }
   }, [testResult]);
+
+  useEffect(() => {
+    if (shouldFetchLlm && testResult && !isLoadingLlmResults) {
+      setShouldFetchLlm(false);
+      fetchLlmResults(testResult);
+    }
+  }, [shouldFetchLlm]);
 
   const renderResults = () => {
     if (isLoadingResult) {
@@ -842,14 +920,15 @@ const Result = () => {
 
               {testResult.conclusion && (
                 <Box mt={4} pt={4} borderTopWidth="1px">
-                  <Heading size="md" mb={2}>
-                    결론
+                  <Heading size="md" mb={2} color="purple.600">
+                    AI 해석 결론
                   </Heading>
                   <Text whiteSpace="pre-wrap">
-                    {testResult.conclusion.output ||
-                      (typeof testResult.conclusion === "string"
-                        ? testResult.conclusion
-                        : "")}
+                    {testResult.conclusion.output
+                      ? testResult.conclusion.output
+                      : typeof testResult.conclusion === "string"
+                      ? testResult.conclusion
+                      : ""}
                   </Text>
                 </Box>
               )}
