@@ -1,21 +1,19 @@
 import React, { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { SpreadSheets, Worksheet } from "@mescius/spread-sheets-react";
-import "@mescius/spread-sheets/styles/gc.spread.sheets.excel2016colorful.css";
-import * as GC from "@mescius/spread-sheets";
-
 import useWebSocket from "../hooks/useWebSocket";
+import useTableHandlers from "../hooks/useTableHandlers";
+// import { createInitialData } from "../utils/tableUtils";
+import { Spinner } from "@chakra-ui/react";
+import { useTableData } from "../contexts/TableDataContext";
 
 const DataTable = () => {
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("id");
   const token = localStorage.getItem("token");
 
-  const [data, setData, ws] = useWebSocket(projectId, token);
-
+  const [data, setData, ws, loading] = useWebSocket(projectId, token);
   const wsRef = useRef(null);
-  const spreadRef = useRef(null);
-  const isTableInitialized = useRef(false); // 초기화 여부를 추적하는 플래그
+  const { setTableData } = useTableData();
 
   useEffect(() => {
     if (ws) {
@@ -23,75 +21,157 @@ const DataTable = () => {
     }
   }, [ws]);
 
-  // data가 업데이트될 때, spreadRef가 준비되어 있고 아직 초기화되지 않았다면 한 번만 실행
   useEffect(() => {
-    if (
-      !isTableInitialized.current &&
-      data &&
-      data.length > 0 &&
-      spreadRef.current
-    ) {
-      initTable();
-      isTableInitialized.current = true;
+    if (data) {
+      setTableData(data);
     }
-  }, [data]);
+  }, [data, setTableData]);
 
-  const initTable = () => {
-    console.log("초기 데이터로 테이블 초기화:", data);
-    const sheet = spreadRef.current.getActiveSheet();
-    // data 배열의 각 요소를 순회하며 셀 업데이트
-    data.forEach((rowData, rowIndex) => {
-      rowData.forEach((cellData, colIndex) => {
-        sheet.setValue(rowIndex, colIndex, cellData);
-      });
-    });
-  };
+  const {
+    editingCell,
+    cellValue,
+    cellWidths,
+    handleCellDoubleClick,
+    handleCellChange,
+    handleKeyDown,
+    handlePaste,
+    handleInputChange,
+  } = useTableHandlers(data, setData, wsRef);
 
-  // 웹소켓으로 데이터를 전송하는 함수
-  const sendData = (dataToSend) => {
-    const wsInstance = wsRef.current || ws;
-    const { row, col, newValue } = dataToSend;
-
-    if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
-      wsInstance.send(
-        JSON.stringify({
-          row,
-          col,
-          value: newValue,
-        })
-      );
-      console.log("전송된 데이터:", { row, col, value: newValue });
-    } else {
-      console.log("WebSocket 연결이 준비되지 않음.");
-    }
-  };
-
-  // Spread 초기화 함수
-  const initSpread = (spread) => {
-    spreadRef.current = spread;
-    const sheet = spread.getActiveSheet();
-
-    sheet.bind(GC.Spread.Sheets.Events.ValueChanged, (event, args) => {
-      sendData(args);
-    });
-
-    // 스프레드 초기화 시, 이미 data가 있다면 초기화 실행
-    if (!isTableInitialized.current && data && data.length > 0) {
-      initTable();
-      isTableInitialized.current = true;
-    }
-  };
-
-  const hostStyle = {
-    width: "100%",
-    height: "400px",
-  };
+  // 데이터 받아오기 전까지 -
+  // css는 jsx 안에 다 넣으면 되는 건가? 아니면 css 파일 새로 만들어도 되려나
+  if (loading || !data) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "400px",
+        }}
+      >
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <SpreadSheets workbookInitialized={initSpread} hostStyle={hostStyle}>
-        <Worksheet />
-      </SpreadSheets>
+    <div style={{ overflow: "auto", maxHeight: "400px" }}>
+      <table style={{ borderCollapse: "collapse", width: "100%" }}>
+        <thead>
+          <tr>
+            {/* 좌상단 빈 셀 */}
+            <th
+              style={{
+                border: "1px solid #ddd",
+                padding: "0",
+                backgroundColor: "#f2f2f2",
+                position: "sticky",
+                top: 0,
+                left: 0,
+                zIndex: 2,
+              }}
+            ></th>
+
+            {/* 열 번호? 알파벳?*/}
+            {data &&
+              data[0] &&
+              data[0].map((_, colIndex) => (
+                <th
+                  key={`col-${colIndex}`}
+                  style={{
+                    border: "1px solid #ddd",
+                    padding: "0",
+                    backgroundColor: "#f2f2f2",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 1,
+                  }}
+                >
+                  {String.fromCharCode(65 + colIndex)}
+                </th>
+              ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data &&
+            data.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {/* 행 번호 */}
+                <td
+                  style={{
+                    border: "1px solid #ddd",
+                    padding: "0",
+                    backgroundColor: "#f2f2f2",
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 1,
+                    textAlign: "center",
+                  }}
+                >
+                  {rowIndex + 1}
+                </td>
+
+                {row.map((cell, colIndex) => {
+                  const cellKey = `${rowIndex}-${colIndex}`;
+                  const isFocused =
+                    editingCell?.row === rowIndex &&
+                    editingCell?.col === colIndex;
+                  const cellWidth =
+                    isFocused && cellWidths[cellKey]
+                      ? cellWidths[cellKey]
+                      : "80px";
+
+                  return (
+                    <td
+                      key={cellKey}
+                      style={{
+                        border: "1px solid #ddd",
+                        padding: "8px",
+                        height: "30px",
+                        minWidth: isFocused ? cellWidth : "80px",
+                        width: isFocused ? cellWidth : "80px",
+                        transition: "width 0.2s ease",
+                      }}
+                      onClick={() =>
+                        handleCellDoubleClick(rowIndex, colIndex, cell)
+                      }
+                      onDoubleClick={() =>
+                        handleCellDoubleClick(rowIndex, colIndex, cell)
+                      }
+                    >
+                      {isFocused ? (
+                        <input
+                          type="text"
+                          value={cellValue}
+                          onChange={(e) =>
+                            handleInputChange(e, rowIndex, colIndex)
+                          }
+                          onBlur={() =>
+                            handleCellChange(rowIndex, colIndex, cellValue)
+                          }
+                          onKeyDown={(e) =>
+                            handleKeyDown(e, rowIndex, colIndex)
+                          }
+                          onPaste={(e) => handlePaste(e, rowIndex, colIndex)}
+                          autoFocus
+                          style={{
+                            width: "100%",
+                            border: "none",
+                            outline: "none",
+                            padding: "0",
+                          }}
+                        />
+                      ) : (
+                        cell
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+        </tbody>
+      </table>
     </div>
   );
 };
