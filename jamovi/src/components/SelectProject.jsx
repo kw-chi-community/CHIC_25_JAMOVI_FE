@@ -22,11 +22,12 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { FiMoreVertical } from "react-icons/fi"; // 점 세 개 아이콘
+import { FiMoreVertical, FiLogOut } from "react-icons/fi"; // 점 세 개 아이콘과 로그아웃 아이콘 추가
 import useProj from "../hooks/useProj"; // useProj 훅 임포트
 
 const SelectProject = () => {
-  const { projects, isLoading, error, fetchProjects, delProj, updateProject } = useProj();
+  const { projects, isLoading, error, fetchProjects, delProj, updateProject } =
+    useProj();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -89,10 +90,26 @@ const SelectProject = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
+
   return (
     <div className="flex justify-center items-center p-4 w-full">
       <Card className="w-full max-w-2xl min-h-[80vh] m-auto mt-[10vh] p-5 shadow-lg">
-        <h1 className="text-2xl font-bold mb-4">프로젝트 목록</h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">프로젝트 목록</h1>
+          <Button
+            leftIcon={<FiLogOut />}
+            variant="outline"
+            colorScheme="red"
+            size="sm"
+            onClick={handleLogout}
+          >
+            로그아웃
+          </Button>
+        </div>
         <hr className="my-5" />
 
         {isLoading && (
@@ -157,7 +174,8 @@ const SelectProject = () => {
                               await delProj(project.id);
                               toast({
                                 title: "삭제 완료",
-                                description: "프로젝트가 성공적으로 삭제되었습니다.",
+                                description:
+                                  "프로젝트가 성공적으로 삭제되었습니다.",
                                 status: "success",
                                 duration: 3000,
                                 isClosable: true,
@@ -166,7 +184,8 @@ const SelectProject = () => {
                               toast({
                                 title: "삭제 실패",
                                 description:
-                                  err.message || "프로젝트 삭제 중 오류가 발생했습니다.",
+                                  err.message ||
+                                  "프로젝트 삭제 중 오류가 발생했습니다.",
                                 status: "error",
                                 duration: 5000,
                                 isClosable: true,
@@ -211,7 +230,9 @@ const SelectProject = () => {
               onChange={(e) => setNewName(e.target.value)}
               placeholder="새 프로젝트 이름"
             />
-            <Text mt={4} mb={2}>프로젝트 설명</Text>
+            <Text mt={4} mb={2}>
+              프로젝트 설명
+            </Text>
             <Textarea
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
@@ -219,8 +240,12 @@ const SelectProject = () => {
             />
           </ModalBody>
           <ModalFooter>
-            <Button onClick={onClose} mr={3}>취소</Button>
-            <Button colorScheme="blue" onClick={handleEditProject}>수정</Button>
+            <Button onClick={onClose} mr={3}>
+              취소
+            </Button>
+            <Button colorScheme="blue" onClick={handleEditProject}>
+              수정
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
