@@ -13,23 +13,26 @@ import TableTest from "./components/TableTest";
 import { ChakraProvider } from "@chakra-ui/react";
 import { DndContext } from "@dnd-kit/core";
 import { TableDataProvider } from "./contexts/TableDataContext";
+import { ResultProvider } from "./contexts/ResultContext";
 
 function App() {
   return (
     <ChakraProvider>
       <DndContext>
         <TableDataProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<LoginForm />} />
-              <Route path="/login" element={<LoginForm />} />
-              <Route path="/register" element={<RegisterForm />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/project" element={<SelectProject />} />
-              <Route path="/create-project" element={<CreateProject />} />
-              <Route path="/table-test" element={<TableTest />} />
-            </Routes>
-          </Router>
+          <ResultProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<LoginForm />} />
+                <Route path="/login" element={<LoginForm />} />
+                <Route path="/register" element={<RegisterForm />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/project" element={<SelectProject />} />
+                <Route path="/create-project" element={<CreateProject />} />
+                <Route path="/table-test" element={<TableTest />} />
+              </Routes>
+            </Router>
+          </ResultProvider>
         </TableDataProvider>
       </DndContext>
     </ChakraProvider>
